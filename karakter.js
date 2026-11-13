@@ -15,7 +15,10 @@ const Karakter = (() => {
     { ad: 'Demirci', ten: '#b57a55', gomlek: '#b57a55', onluk: '#5a3820', pantolon: '#26262a', sapka: 'kel', sakal: '#1a1410', gen: 1.25, boy: 1.05, ciplakKol: true },
     { ad: 'Kumarbaz', ten: '#e5b896', gomlek: '#5b2b6e', yelek: '#f0ece0', pantolon: '#3b1c48', sapka: 'melon', sapkaRenk: '#121212', bıyık: '#1a1a1a', ince: true },
     { ad: 'Yaşlı Nine', ten: '#efc9ae', elbise: '#9d8bb5', gomlek: '#9d8bb5', sac: '#d9d9d9', sapka: 'topuz', sal: '#d8cfc0', boy: 0.9, baston: true },
+    // 10: Şerif — sadece şerifler giyer, kasabalılarda yok
+    { ad: 'Şerif', ten: '#d9a37e', gomlek: '#cfae72', yelek: '#4a2e18', pantolon: '#3a2c20', sapka: 'serif', sapkaRenk: '#1e140c', bıyık: '#3a2414', buyukBiyik: true, kemer: true, gen: 1.06, boy: 1.03 },
   ];
+  const SERIF_TIP = 10;
 
   const geoCache = new Map(), matCache = new Map();
   const kutu = (w, h, d) => { const k = `k${w},${h},${d}`; if (!geoCache.has(k)) geoCache.set(k, new THREE.BoxGeometry(w, h, d)); return geoCache.get(k); };
@@ -25,7 +28,7 @@ const Karakter = (() => {
   function parca(geo, renk, x, y, z, ebeveyn) { const m = new THREE.Mesh(geo, mat(renk)); m.position.set(x, y, z); ebeveyn.add(m); return m; }
 
   function yap(tipNo, serif = false) {
-    const t = TIPLER[((tipNo % 10) + 10) % 10];
+    const t = TIPLER[tipNo] || TIPLER[0];
     const g = new THREE.Group();
     const govdeG = new THREE.Group(); g.add(govdeG);
     const gen = t.gen || 1, inc = t.ince ? 0.9 : 1;
@@ -47,7 +50,15 @@ const Karakter = (() => {
     if (t.sal) parca(kutu(0.6 * gen, 0.2, 0.36), t.sal, 0, 1.43, 0, govdeG);
     if (t.elbise) parca(silindir(0.27 * gen, 0.42 * gen, 0.9, 12), t.elbise, 0, 0.47, 0, govdeG);
     if (t.canta) parca(kutu(0.3, 0.2, 0.14), t.canta, -0.4 * gen, 0.85, 0.05, govdeG);
-    if (serif) { const y = parca(kutu(0.1, 0.1, 0.03), '#ffd23f', -0.13, 1.33, 0.18, govdeG); y.rotation.z = Math.PI / 4; }
+    if (serif) {   // büyük altın yıldız
+      [0, Math.PI / 4].forEach(a => { const y = parca(kutu(0.12, 0.12, 0.03), '#ffd23f', -0.13, 1.33, 0.2, govdeG); y.rotation.z = a; });
+      parca(kutu(0.04, 0.04, 0.035), '#b8860b', -0.13, 1.33, 0.215, govdeG);
+    }
+    if (t.kemer) {   // silah kemeri, toka, boş kılıf
+      parca(kutu(0.56 * gen, 0.1, 0.34), '#2e1c0e', 0, 0.9, 0, govdeG);
+      parca(kutu(0.09, 0.07, 0.03), '#c9c9d2', 0, 0.9, 0.175, govdeG);
+      parca(kutu(0.1, 0.24, 0.12), '#3a2210', 0.32 * gen, 0.8, 0.03, govdeG);
+    }
     // Kollar (omuzdan döner)
     const kol = s => {
       const p = new THREE.Group(); p.position.set(0.33 * s * gen * inc, 1.48, 0); govdeG.add(p);
@@ -57,6 +68,7 @@ const Karakter = (() => {
     };
     const kolL = kol(1), kolR = kol(-1);
     if (t.baston) { const b = parca(silindir(0.025, 0.025, 0.9, 6), '#5a3a1a', 0, -0.95, 0.06, kolR); b.rotation.x = 0.1; }
+    if (serif) tabancaEkle(kolR);
     // Baş
     const bas = new THREE.Group(); bas.position.set(0, 1.72, 0); govdeG.add(bas);
     parca(kutu(0.3, 0.32, 0.3), t.ten, 0, 0, 0, bas);
@@ -74,15 +86,50 @@ const Karakter = (() => {
       case 'melon': parca(silindir(0.24, 0.24, 0.03, 14), sr, 0, 0.17, 0, bas); { const k = parca(kure(0.17, 12), sr, 0, 0.19, 0, bas); k.scale.y = 0.9; } break;
       case 'hasir': parca(silindir(0.46, 0.46, 0.03, 16), sr, 0, 0.17, 0, bas); parca(silindir(0.15, 0.18, 0.14, 10), sr, 0, 0.24, 0, bas); break;
       case 'baret': parca(kure(0.19, 12), sr, 0, 0.14, 0, bas); parca(kutu(0.08, 0.07, 0.04), '#ffd84a', 0, 0.2, 0.18, bas); break;
+      case 'serif': {   // geniş kenarlı, yanları kalkık koyu şerif şapkası + altın bant
+        parca(silindir(0.42, 0.42, 0.04, 16), sr, 0, 0.17, 0, bas);
+        [-1, 1].forEach(s => { const k = parca(kutu(0.1, 0.03, 0.5), sr, 0.38 * s, 0.22, 0, bas); k.rotation.z = -0.6 * s; });
+        parca(silindir(0.17, 0.2, 0.26, 12), sr, 0, 0.31, 0, bas);
+        parca(silindir(0.205, 0.205, 0.05, 12), '#c9a23a', 0, 0.21, 0, bas);
+        break;
+      }
       case 'duz': parca(silindir(0.34, 0.34, 0.04, 14), sr, 0, 0.17, 0, bas); parca(silindir(0.15, 0.15, 0.1, 10), sr, 0, 0.22, 0, bas); break;
       case 'topuz': parca(kure(0.11, 10), t.sac, 0, 0.2, -0.1, bas); if (t.tuy) { const f = parca(kutu(0.04, 0.22, 0.03), t.tuy, 0.1, 0.27, -0.05, bas); f.rotation.z = -0.4; } break;
       default: parca(kutu(0.31, 0.06, 0.31), t.ten, 0, 0.17, 0, bas);   // kel
     }
     const boy = t.boy || 1;
     g.scale.set(1, boy, 1);
-    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0 };
+    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0 };
     return g;
   }
+
+  // Altıpatlar tabanca: kabza elde, namlu kolun devamı yönünde (kol kalkınca ileri bakar)
+  function tabancaEkle(kol) {
+    const t = new THREE.Group(); t.position.set(0, -0.66, 0.02); kol.add(t);
+    parca(kutu(0.06, 0.11, 0.07), '#5a3418', 0, 0.02, 0, t);                                  // kabza
+    const silindirG = parca(silindir(0.045, 0.045, 0.09, 8), '#3a3a42', 0, -0.07, 0.03, t);   // topaç
+    silindirG.rotation.x = Math.PI / 2;
+    parca(kutu(0.035, 0.24, 0.035), '#2a2a30', 0, -0.2, 0.03, t);                             // namlu
+    parca(kutu(0.02, 0.04, 0.03), '#2a2a30', 0, -0.03, -0.04, t);                             // tetik korkuluğu
+    return t;
+  }
+  // Birinci şahıs görünümünde kameraya bağlı tabanca (sağ altta görünür)
+  function elTabancasi() {
+    const g = new THREE.Group();
+    const m = c => new THREE.MeshBasicMaterial({ color: c });
+    const ekle = (geo, renk, x, y, z) => { const k = new THREE.Mesh(geo, m(renk)); k.position.set(x, y, z); g.add(k); return k; };
+    ekle(new THREE.BoxGeometry(0.06, 0.06, 0.34), '#2a2a30', 0, 0.02, -0.17);                 // namlu
+    const top = ekle(new THREE.CylinderGeometry(0.05, 0.05, 0.1, 10), '#45454e', 0, 0, 0.02); top.rotation.x = Math.PI / 2;
+    const kabza = ekle(new THREE.BoxGeometry(0.06, 0.16, 0.08), '#6a3e1c', 0, -0.09, 0.09); kabza.rotation.x = -0.35;
+    ekle(new THREE.BoxGeometry(0.1, 0.1, 0.14), '#d9a37e', 0, -0.1, 0.13);                   // el
+    const alev = ekle(new THREE.SphereGeometry(0.05, 8, 6), '#ffdd55', 0, 0.02, -0.38); alev.visible = false;
+    g.userData.alev = alev;
+    g.scale.setScalar(0.55);
+    g.traverse(o => { if (o.isMesh) { o.material.depthTest = false; o.renderOrder = 30; } });
+    return g;
+  }
+  // Ateş edince kolunu kaldırsın
+  function atesEt(g) { g.userData.atesT = 0.6; }
 
   // h: 0 duruyor, 1 yürüyor, 2 koşuyor
   function canlandir(g, h, dt) {
@@ -99,7 +146,11 @@ const Karakter = (() => {
     u.bacakL.rotation.x = yumusak(u.bacakL.rotation.x, hedef);
     u.bacakR.rotation.x = yumusak(u.bacakR.rotation.x, -hedef);
     u.kolL.rotation.x = yumusak(u.kolL.rotation.x, -hedef * 0.8);
-    u.kolR.rotation.x = yumusak(u.kolR.rotation.x, hedef * 0.8);
+    if (u.serif) {   // şerif tabancayı tutar; ateş edince kolunu kaldırıp nişan alır
+      u.atesT = Math.max(0, u.atesT - dt);
+      const kol = u.atesT > 0 ? -1.5 : -0.32 + hedef * 0.2;
+      u.kolR.rotation.x = u.atesT > 0.35 ? kol : yumusak(u.kolR.rotation.x, kol);
+    } else u.kolR.rotation.x = yumusak(u.kolR.rotation.x, hedef * 0.8);
     u.govdeG.position.y = hiz ? Math.abs(Math.sin(u.faz)) * (h === 2 ? 0.08 : 0.03) : 0;
     u.govdeG.rotation.x = yumusak(u.govdeG.rotation.x, h === 2 ? 0.18 : 0);
   }
@@ -128,5 +179,5 @@ const Karakter = (() => {
   // Birinci şahıs görünümde kendi kafanı gizle
   function basGizle(g, gizli) { g.userData.bas.visible = !gizli; }
 
-  return { TIPLER, yap, canlandir, cizgiEkle, cizgiKaldir, basGizle };
+  return { TIPLER, SERIF_TIP, yap, canlandir, cizgiEkle, cizgiKaldir, basGizle, elTabancasi, atesEt };
 })();

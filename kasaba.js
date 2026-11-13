@@ -105,14 +105,29 @@ const Kasaba = (() => {
 
   // ---------- Çarpışma ----------
   const kutular = binalar.map(b => ({ x1: b.x - b.g / 2, x2: b.x + b.g / 2, z1: b.z - b.d / 2, z2: b.z + b.d / 2 }));
+
+  // Şerif bekleme odası: oyun başında şerifler burada kilitli bekler, sonra doğudaki kapı açılır
+  const serifOdasi = { x: -61, z: -31, g: 10, d: 7, y: 3.2, kapiG: 2.4 };
+  {
+    const o = serifOdasi, K = 0.5, x1 = o.x - o.g / 2, x2 = o.x + o.g / 2, z1 = o.z - o.d / 2, z2 = o.z + o.d / 2, kg = o.kapiG / 2;
+    kutular.push(
+      { x1, x2, z1: z1 - K / 2, z2: z1 + K / 2 }, { x1, x2, z1: z2 - K / 2, z2: z2 + K / 2 },          // kuzey, güney
+      { x1: x1 - K / 2, x2: x1 + K / 2, z1, z2 },                                                        // batı
+      { x1: x2 - K / 2, x2: x2 + K / 2, z1, z2: o.z - kg }, { x1: x2 - K / 2, x2: x2 + K / 2, z1: o.z + kg, z2 },   // doğu (kapı boşluğu)
+      { x1: x2 - K / 2, x2: x2 + K / 2, z1: o.z - kg, z2: o.z + kg, kapi: true },                        // kapı
+    );
+  }
+  let kapiKapali = false;
+  const sayilir = k => !k.kapi || kapiKapali;
   function icerde(x, z, pay = 0) {
-    for (const k of kutular) if (x > k.x1 - pay && x < k.x2 + pay && z > k.z1 - pay && z < k.z2 + pay) return true;
+    for (const k of kutular) if (sayilir(k) && x > k.x1 - pay && x < k.x2 + pay && z > k.z1 - pay && z < k.z2 + pay) return true;
     for (const e of engeller) if ((x - e.x) ** 2 + (z - e.z) ** 2 < (e.r + pay) ** 2) return true;
     return false;
   }
   // Yuvarlak bir karakteri engellerin dışına it
   function it(x, z, r = 0.35) {
     for (const k of kutular) {
+      if (!sayilir(k)) continue;
       const yx = Math.max(k.x1, Math.min(x, k.x2)), yz = Math.max(k.z1, Math.min(z, k.z2));
       const dx = x - yx, dz = z - yz, d2 = dx * dx + dz * dz;
       if (d2 < r * r) {
@@ -140,7 +155,7 @@ const Kasaba = (() => {
     for (let t = 0.3; t < enFazla; t += 0.3) { if (icerdeBina(x + dx * t, z + dz * t)) return t; }
     return enFazla;
   }
-  function icerdeBina(x, z) { for (const k of kutular) if (x > k.x1 && x < k.x2 && z > k.z1 && z < k.z2) return true; return false; }
+  function icerdeBina(x, z) { for (const k of kutular) if (sayilir(k) && x > k.x1 && x < k.x2 && z > k.z1 && z < k.z2) return true; return false; }
 
   // ---------- Yürüme ağı (botlar için) ----------
   const ADIM = 6;
@@ -184,6 +199,9 @@ const Kasaba = (() => {
   for (let x = -80; x <= 80; x += 8) { ugraklar.push({ x, z: -5.5, bekle: [1, 5] }); ugraklar.push({ x, z: 5.5, bekle: [1, 5] }); }
   for (let z = -70; z <= 70; z += 10) if (Math.abs(z) > 10) ugraklar.push({ x: (z % 20 ? 3 : -3), z, bekle: [1, 4] });
 
-  return { SINIR, CADDE, ARA, RAY_Z, binalar, alanlar, engeller, gorevler, kiliklar, ugraklar, it, icerde, yolAcik, isin, yol, binaBul, dugumSayisi: dugumler.length };
+  // Odanın içinde rastgele bir yer (şeriflerin başlangıcı)
+  function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
+
+  return { serifOdasi, odadaYer, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; }, SINIR, CADDE, ARA, RAY_Z, binalar, alanlar, engeller, gorevler, kiliklar, ugraklar, it, icerde, yolAcik, isin, yol, binaBul, dugumSayisi: dugumler.length };
 })();
 if (typeof module !== 'undefined') module.exports = Kasaba;

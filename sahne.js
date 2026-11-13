@@ -19,7 +19,7 @@ const Sahne = (() => {
     scene.add(new THREE.HemisphereLight('#fff3dc', '#a0703f', 0.95));
     const gunes = new THREE.DirectionalLight('#fff0d0', 0.9); gunes.position.set(60, 100, 30); scene.add(gunes);
     addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
-    zemin(); Kasaba.binalar.forEach(bina); alanlarCiz(); engellerCiz(); demiryolu(); tepeler(); sokakSusleri();
+    zemin(); Kasaba.binalar.forEach(bina); alanlarCiz(); engellerCiz(); demiryolu(); tepeler(); sokakSusleri(); serifOdasiCiz();
     return { scene, kamera, renderer };
   }
 
@@ -218,11 +218,45 @@ const Sahne = (() => {
       x.fillStyle = b.tur === 'ev' ? '#8a6a4f' : '#5a3a26';
       x.fillRect(P(b.x - b.g / 2), P(b.z - b.d / 2), b.g * S, b.d * S);
     });
-    const ef = Math.max(9, Math.round(boyut / 22));
-    x.font = `${ef}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
-    [...Kasaba.binalar.filter(b => b.tur !== 'ev'), ...Kasaba.alanlar].forEach(b => x.fillText(b.emoji, P(b.x), P(b.z)));
+    const so = Kasaba.serifOdasi;
+    x.fillStyle = '#6a4a1a'; x.fillRect(P(so.x - so.g / 2), P(so.z - so.d / 2), so.g * S, so.d * S);
+    // Her binanın üstünde simgesi ve adı
+    const ef = Math.round(boyut / 26), af = Math.round(boyut / 40);
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    const etiket = (emoji, ad, px, pz) => {
+      x.font = `${ef}px sans-serif`; x.fillText(emoji, P(px), P(pz) - af * 0.6);
+      x.font = `900 ${af}px Nunito, sans-serif`; x.lineWidth = Math.max(2, af / 4); x.strokeStyle = '#2a1608'; x.fillStyle = '#fff4dc';
+      x.strokeText(ad, P(px), P(pz) + ef * 0.55); x.fillText(ad, P(px), P(pz) + ef * 0.55);
+    };
+    [...Kasaba.binalar.filter(b => b.tur !== 'ev'), ...Kasaba.alanlar].forEach(b => etiket(b.emoji, b.ad, b.x, b.z));
+    etiket('🚪', 'Şerif odası', so.x, so.z);
     return c;
   }
 
-  return { kur, haritaZemini, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
+  // ---------- Şerif bekleme odası (kapısı menteşeden açılır) ----------
+  let kapiGrup = null, kapiHedef = 0;
+  function serifOdasiCiz() {
+    const o = Kasaba.serifOdasi, K = 0.5, h = o.y, kg = o.kapiG / 2;
+    const tahta = mat('#7a5530'), koyuT = mat('#4a3020'), cati = mat('#5a3a20');
+    const duvar = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), tahta); m.position.set(x, h / 2, z); scene.add(m); };
+    const x1 = o.x - o.g / 2, x2 = o.x + o.g / 2, z1 = o.z - o.d / 2, z2 = o.z + o.d / 2;
+    duvar(o.g + K, K, o.x, z1); duvar(o.g + K, K, o.x, z2); duvar(K, o.d, x1, o.z);
+    const yan = (o.d / 2 - kg); duvar(K, yan, x2, z1 + yan / 2); duvar(K, yan, x2, z2 - yan / 2);
+    // Kapının üstü, çatı, iç zemin
+    const ust = new THREE.Mesh(new THREE.BoxGeometry(K, h - 2.6, o.kapiG), tahta); ust.position.set(x2, 2.6 + (h - 2.6) / 2, o.z); scene.add(ust);
+    const c = new THREE.Mesh(new THREE.BoxGeometry(o.g + 1, 0.25, o.d + 1), cati); c.position.set(o.x, h + 0.12, o.z); scene.add(c);
+    const z = new THREE.Mesh(new THREE.PlaneGeometry(o.g, o.d), mat('#8a6440')); z.rotation.x = -Math.PI / 2; z.position.set(o.x, 0.03, o.z); scene.add(z);
+    // İçeride fener ve sıralar
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.3), mat('#ffd27a', { emissive: '#aa7a20' })); f.position.set(o.x, h - 0.5, o.z); scene.add(f);
+    [-1, 1].forEach(s => { const b = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 0.6), koyuT); b.position.set(o.x - 1.5, 0.25, o.z + s * (o.d / 2 - 0.7)); scene.add(b); });
+    // Tabela
+    const t = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), tabela('ŞERİFLER')); t.position.set(x2 + K / 2 + 0.02, h - 0.2, o.z); t.rotation.y = Math.PI / 2; scene.add(t);
+    // Kapı: menteşe kuzey kenarda, dışarı doğru açılır
+    kapiGrup = new THREE.Group(); kapiGrup.position.set(x2 + 0.05, 0, o.z - kg); scene.add(kapiGrup);
+    const k = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.6, o.kapiG), mat('#5a3420')); k.position.set(0, 1.3, kg); kapiGrup.add(k);
+    const kol = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), mat('#c9a23a')); kol.position.set(0.1, 1.2, o.kapiG - 0.3); kapiGrup.add(kol);
+  }
+  function kapiCanlandir(dt) { if (kapiGrup) kapiGrup.rotation.y += (kapiHedef - kapiGrup.rotation.y) * Math.min(1, dt * 3); }
+
+  return { kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
 })();

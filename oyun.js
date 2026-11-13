@@ -10,6 +10,7 @@
   const SERIF_RENK = '#ffc61a', TAKIM_RENK = '#33ff55';
 
   let sahneKurulu = false;
+  let elSilah = null, tepme = 0;   // birinci şahısta görünen tabanca ve ateş sarsıntısı
   let oyun = null;                 // oyun sırasındaki her şey
   let motorSayac = null;
   let sonAyar = null;
@@ -128,18 +129,25 @@
       case 'elendin': if (oyun) elendin(m); break;
       case 'sesler': Object.entries(m.v).forEach(([id, v]) => Ag.seviyeAyarla(id, v)); break;
       case 'bitti': if (oyun) bitti(m); break;
+      case 'kapi': if (oyun) kapiAcildi(); break;
+      case 'serifler': serifPaneli(m.liste); break;
       case 'lobi': oyunuTemizle(); ekran('lobi'); break;
     }
   }
 
   // ---------- Oyun kurulumu ----------
   function oyunBaslat(m) {
-    if (!sahneKurulu) { Sahne.kur($('sahne')); sahneKurulu = true; haritaZemin = Sahne.haritaZemini(600); requestAnimationFrame(dongu); }
+    if (!sahneKurulu) {
+      Sahne.kur($('sahne')); sahneKurulu = true; haritaZemin = Sahne.haritaZemini(1800);
+      elSilah = Karakter.elTabancasi(); Sahne.kamera.add(elSilah); Sahne.scene.add(Sahne.kamera);
+      requestAnimationFrame(dongu);
+    }
     oyunuTemizle();
     oyun = {
       benimNo: m.benimNo, rol: m.rol, takim: new Set(m.takim), serifler: new Set(m.serifler), ayar: m.ayar,
       takimAdlar: m.takimAdlar, serifAdlar: m.serifAdlar,
-      x: m.x, z: m.z, yaw: Math.random() * 6.28, pitch: -0.05, govdeYaw: 0, tip: m.tipNo,
+      x: m.x, z: m.z, yaw: m.rol === 'serif' ? Math.PI / 2 : Math.random() * 6.28, pitch: -0.05, govdeYaw: m.rol === 'serif' ? Math.PI / 2 : 0, tip: m.tipNo,
+      kapiAcilis: performance.now() + (m.bekleme || 0) * 1000, kapiAcik: !m.bekleme,
       canli: true, kamera: 'arka', kos: false, is: null, telsiz: false,
       hak: m.ayar.hak, kilik: m.ayar.kilik, muhbir: 1, muhbirAktif: false,
       gorevSayi: 0, yapilan: new Set(), kalan: m.sure, sonGonder: 0, sonAtes: 0, darbe: [],
@@ -148,6 +156,7 @@
     $('elendiYazi').classList.add('gizli');
     $('ilerleme').classList.add('gizli');
     $('harita').classList.remove('buyuk');
+    Kasaba.odaKapisi(!oyun.kapiAcik); Sahne.serifKapisi(oyun.kapiAcik, true);
     isaretleriKur();
     ekran('hud');
     hudGuncelle();
@@ -162,9 +171,32 @@
     Ses.bildirim();
   }
   const benimAdim = () => Ag.oyuncular.find(o => o.id === Ag.benimId)?.ad;
+  // Üst ortada: her şerifin adı ve kalan atış hakkı (herkes görür)
+  function serifPaneli(liste) {
+    $('serifPanel').innerHTML = liste.map(s => {
+      const durum = s.durum === 2 ? '<em>⛓️ hapiste</em>' : s.durum === 4 ? '<em>🚪 ayrıldı</em>' : '<i class="mermi"></i>'.repeat(s.hak) || '<em>hak yok</em>';
+      return `<span class="${s.durum ? 'dusmus' : ''}">⭐ ${kacis(s.ad)} <b>${durum}</b></span>`;
+    }).join('');
+  }
+  function kapiAcildi() {
+    if (oyun.kapiAcik) return;
+    oyun.kapiAcik = true; Kasaba.odaKapisi(false); Sahne.serifKapisi(true);
+    $('bekleYazi').classList.add('gizli');
+    toast(oyun.rol === 'serif' ? '🚪 Kapı açıldı! Haydutları bul!' : '🚪 Şerifler kasabaya çıktı!', 2500);
+    akisEkle('🚪 Şerifler odadan çıktı', 'kotu');
+    Ses.hapis();
+  }
+  // Kapı açılana kadar üstte geri sayım
+  function bekleGuncelle(t) {
+    if (oyun.kapiAcik) return;
+    const kalan = Math.max(0, Math.ceil((oyun.kapiAcilis - t) / 1000));
+    const y = $('bekleYazi'); y.classList.remove('gizli');
+    y.textContent = oyun.rol === 'serif' ? `🔒 Odadasın · kapı ${kalan} sn sonra açılacak` : `🔒 Şerifler ${kalan} sn sonra çıkacak · kalabalığa karış!`;
+  }
   function oyunuTemizle() {
     varliklar.forEach(v => Sahne.scene?.remove(v.g)); varliklar.clear();
     isaretler.forEach(s => Sahne.scene?.remove(s)); isaretler.length = 0;
+    $('serifPanel').innerHTML = ''; $('bekleYazi').classList.add('gizli');
     oyun = null;
     if (Ag.seviyeleriSifirla) Ag.seviyeleriSifirla();
   }
@@ -223,6 +255,17 @@
     if (e.code === 'KeyT') telsizDegistir();
     if (e.code === 'KeyM') $('harita').classList.toggle('buyuk');
     if (e.code === 'KeyF' && oyun.rol === 'serif') ates();
+    if (e.code === 'KeyK') mikDegistir();
+    // Alt: fareyi serbest bırak (mikrofon vb. tuşlara tıklamak için). ESC de aynı işi yapar.
+    if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); if (document.pointerLockElement) document.exitPointerLock(); }
+  });
+  // Fare kilidi açılınca/kapanınca alttaki yazı değişsin
+  document.addEventListener('pointerlockchange', () => {
+    const kilitli = document.pointerLockElement === kanvas;
+    $('ipucu').textContent = kilitli
+      ? 'Fareyi serbest bırak: ESC veya Alt · WASD yürü · Shift koş · E görev · V kamera · T telsiz · K mikrofon · M harita'
+      : '🖱️ Fare serbest: tuşlara tıklayabilirsin. Oyuna dönmek için ekrana tıkla.';
+    $('ipucu').classList.toggle('serbest', !kilitli && !!oyun);
   });
   addEventListener('keyup', e => tuslar.delete(e.code));
   addEventListener('blur', () => tuslar.clear());
@@ -366,6 +409,7 @@
   }
   function ates() {
     if (!oyun || oyun.rol !== 'serif' || !oyun.canli) return;
+    if (!oyun.kapiAcik) { toast('🔒 Kapı açılmadan ateş edemezsin', 1200); return; }
     const t = performance.now(); if (t - oyun.sonAtes < 1800) return;
     oyun.sonAtes = t;
     Ag.eveGonder({ tip: 'ates', hedef: nisanHedefi() });
@@ -374,9 +418,12 @@
     const v = varliklar.get(m.no);
     const uz = m.no === oyun.benimNo ? 0 : v ? Math.hypot(v.x - oyun.x, v.z - oyun.z) : 40;
     Ses.ates(uz);
-    if (v) {   // namlu alevi
+    if (m.no === oyun.benimNo) tepme = 1;
+    const kendiGozum = m.no === oyun.benimNo && oyun.kamera === 'goz';
+    if (v && !kendiGozum) {   // kolunu kaldırır, namlu alevi
+      Karakter.atesEt(v.g);
       const p = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffdd55' }));
-      const y = v.yaw; p.position.set(v.x + Math.sin(y) * 0.6 - Math.cos(y) * 0.35, 1.3, v.z + Math.cos(y) * 0.6 + Math.sin(y) * 0.35);
+      const y = v.yaw; p.position.set(v.x + Math.sin(y) * 0.95 - Math.cos(y) * 0.33, 1.48, v.z + Math.cos(y) * 0.95 + Math.sin(y) * 0.33);
       Sahne.scene.add(p); setTimeout(() => Sahne.scene.remove(p), 90);
     }
     const h = varliklar.get(m.hedef);
@@ -430,27 +477,38 @@
 
   // ---------- Küçük harita ----------
   let haritaZemin = null, sonHarita = 0;
+  // Küçükken senin etrafını yakından (YAKIN metre yarıçap), büyükken bütün kasabayı gösterir
+  const YAKIN = 34;
   function haritaCiz() {
-    const c = $('harita'), x = c.getContext('2d'), N = c.width;
-    const S = N / (Kasaba.SINIR * 2), P = v => (v + Kasaba.SINIR) * S;
-    x.drawImage(haritaZemin, 0, 0, N, N);
-    const nokta = (px, pz, r, renk, kenar = '#0008') => { x.beginPath(); x.arc(P(px), P(pz), r, 0, 7); x.fillStyle = renk; x.fill(); x.lineWidth = 1.5; x.strokeStyle = kenar; x.stroke(); };
-    if (oyun.rol === 'haydut') {
+    const c = $('harita'), buyuk = c.classList.contains('buyuk');
+    const istenen = buyuk ? 900 : 320;
+    if (c.width !== istenen) { c.width = c.height = istenen; }
+    const x = c.getContext('2d'), N = c.width, Z = haritaZemin.width, SN = Kasaba.SINIR;
+    // Görünen bölge (dünya koordinatı): merkez ve yarıçap
+    const R = buyuk ? SN : YAKIN;
+    const mx = buyuk ? 0 : Math.max(-SN + R, Math.min(SN - R, oyun.x)), mz = buyuk ? 0 : Math.max(-SN + R, Math.min(SN - R, oyun.z));
+    const S = N / (R * 2);
+    const PX = v => (v - mx + R) * S, PZ = v => (v - mz + R) * S;
+    const zs = Z / (SN * 2);
+    x.drawImage(haritaZemin, (mx - R + SN) * zs, (mz - R + SN) * zs, R * 2 * zs, R * 2 * zs, 0, 0, N, N);
+    const olcek = N / 320;
+    const nokta = (px, pz, r, renk, kenar = '#0008') => { x.beginPath(); x.arc(PX(px), PZ(pz), r * olcek, 0, 7); x.fillStyle = renk; x.fill(); x.lineWidth = 1.5 * olcek; x.strokeStyle = kenar; x.stroke(); };    if (oyun.rol === 'haydut') {
       Kasaba.gorevler.forEach(g => { if (!oyun.yapilan.has(g.id)) nokta(g.x, g.z, 4.5, '#ffcc22'); });
       if (oyun.kilik > 0) Kasaba.kiliklar.forEach(k => nokta(k.x, k.z, 4, '#a070ff'));
     }
     const t = performance.now();
     oyun.darbe = oyun.darbe.filter(d => t - d.bas < 9000);
-    oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(P(d.x), P(d.z), 5 + k * 22, 0, 7); x.strokeStyle = `rgba(255,60,40,${1 - k})`; x.lineWidth = 3; x.stroke(); nokta(d.x, d.z, 4, '#ff3a2a'); });
+    oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(PX(d.x), PZ(d.z), (5 + k * 22) * olcek, 0, 7); x.strokeStyle = `rgba(255,60,40,${1 - k})`; x.lineWidth = 3; x.stroke(); nokta(d.x, d.z, 4, '#ff3a2a'); });
     varliklar.forEach((v, no) => {
       if (no === oyun.benimNo || v.durum !== 0) return;
       if (oyun.serifler.has(no)) nokta(v.x, v.z, 4.5, SERIF_RENK);
       else if (oyun.rol === 'haydut' && oyun.takim.has(no)) nokta(v.x, v.z, 4.5, TAKIM_RENK);
     });
     // Ben: ok
-    x.save(); x.translate(P(oyun.x), P(oyun.z)); x.rotate(-oyun.yaw + Math.PI);
+    x.save(); x.translate(PX(oyun.x), PZ(oyun.z)); x.rotate(-oyun.yaw + Math.PI); x.scale(olcek * 1.2, olcek * 1.2);
     x.beginPath(); x.moveTo(0, -9); x.lineTo(6, 7); x.lineTo(0, 3); x.lineTo(-6, 7); x.closePath();
     x.fillStyle = oyun.canli ? '#fff' : '#bbb'; x.fill(); x.strokeStyle = '#000'; x.lineWidth = 2; x.stroke(); x.restore();
+    if (!buyuk) { x.font = `900 ${Math.round(13 * olcek)}px Nunito, sans-serif`; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 3; x.textAlign = 'right'; x.strokeText('M: büyüt', N - 6, N - 8); x.fillText('M: büyüt', N - 6, N - 8); }
   }
 
   // Sadece yerel testte: durumu dışarıdan görmek için
@@ -462,6 +520,9 @@
     requestAnimationFrame(dongu);
     const dt = Math.min(0.05, (t - sonT) / 1000); sonT = t;
     if (!oyun) { if (!$('hud').classList.contains('gizli')) Sahne.ciz(); return; }
+    bekleGuncelle(t);
+    if (!oyun.kapiAcik && t > oyun.kapiAcilis + 2000) kapiAcildi();   // evden haber gelmezse yine de aç
+    Sahne.kapiCanlandir(dt);
     hareket(dt);
     varliklar.forEach((v, no) => {
       if (no === oyun.benimNo) { v.x = oyun.x; v.z = oyun.z; v.yaw = oyun.govdeYaw; }
@@ -476,6 +537,14 @@
       Karakter.canlandir(v.g, no === oyun.benimNo ? oyun.h : v.h, dt);
     });
     kameraAyarla();
+    if (elSilah) {
+      elSilah.visible = oyun.rol === 'serif' && oyun.canli && oyun.kamera === 'goz';
+      tepme = Math.max(0, tepme - dt * 4);
+      const sallan = oyun.h ? Math.sin(t / (oyun.h === 2 ? 90 : 160)) * 0.012 : 0;
+      elSilah.position.set(0.17, -0.15 + sallan + tepme * 0.02, -0.32 + tepme * 0.05);
+      elSilah.rotation.x = tepme * 0.4;
+      elSilah.userData.alev.visible = tepme > 0.82;
+    }
     // İşaretler hafifçe zıplasın
     isaretler.forEach((s, i) => {
       s.position.y = 2.9 + Math.sin(t / 400 + i) * 0.15;
@@ -540,6 +609,9 @@
       const l2 = Math.hypot(d.x, d.z) || 1;
       const serbest = oyun.canli ? Math.max(0.6, Math.min(uzak, Kasaba.isin(bx, bz, -d.x / l2, -d.z / l2, uzak + 0.4) - 0.4)) : uzak;
       k.position.set(bx - d.x * serbest, Math.max(0.4, yuk - d.y * serbest), bz - d.z * serbest);
+      // Şerif odasındayken kamera çatının üstüne çıkmasın
+      const so = Kasaba.serifOdasi;
+      if (oyun.canli && Math.abs(oyun.x - so.x) < so.g / 2 && Math.abs(oyun.z - so.z) < so.d / 2) k.position.y = Math.min(k.position.y, so.y - 0.3);
     }
     k.lookAt(k.position.x + d.x, k.position.y + d.y, k.position.z + d.z);
   }

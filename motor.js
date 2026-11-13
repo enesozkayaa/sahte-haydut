@@ -8,6 +8,9 @@ const Motor = (() => {
   const YURU = 1.6, KOS = 4.6;
   const ATES_ARA = 1800, ATES_MENZIL = 45;
   const SES_YAKIN = 5, SES_UZAK = 22;
+  const BEKLEME = 15;          // şerifler başta kaç saniye odada kilitli
+  const SERIF_TIP = 10;        // şerif kıyafeti (karakter.js'teki 11. tip)
+  const DONUS = 2.6;           // kasabalıların dönüş hızı (radyan/sn civarı) — oyuncu gibi yumuşak dönsünler
   let o = null;
   let cb = { kisiye() {}, herkese() {} };
   const rnd = (a, b) => a + Math.random() * (b - a);
@@ -40,12 +43,16 @@ const Motor = (() => {
       asama: 'oyun', bitis: Date.now() + ayar.sure * 60000,
       varliklar: new Map(), oyuncular: [], yapilan: new Set(), gorevSayi: 0, bekleyen: [],
       sonrakiNo: toplam, sonSes: 0, yeniKasabali: [],
+      serifCikis: Date.now() + BEKLEME * 1000, kapiAcildi: false,
     };
+    Kasaba.odaKapisi(true);
     oyuncular.forEach((p, i) => {
       const no = nolar[i];
-      const v = npcYap(no); v.oyuncuId = p.id;
+      const rol = sirali.indexOf(p.id) < hayN ? 'haydut' : 'serif';
+      const v = npcYap(no, rol === 'serif' ? Kasaba.odadaYer() : null); v.oyuncuId = p.id;
+      if (rol === 'serif') { v.tip = SERIF_TIP; v.yaw = Math.PI / 2; }   // şerif kıyafeti, kapıya (doğuya) bakar
       o.varliklar.set(no, v);
-      o.oyuncular.push({ id: p.id, ad: p.ad, no, rol: sirali.indexOf(p.id) < hayN ? 'haydut' : 'serif', durum: 0,
+      o.oyuncular.push({ id: p.id, ad: p.ad, no, rol, durum: 0,
         hak: ayar.hak, kilik: ayar.kilik, muhbir: 1, muhbirAktif: false, kanal: 'genel', sonAtes: 0, is: null });
     });
     for (let i = n; i < toplam; i++) o.varliklar.set(nolar[i], npcYap(nolar[i]));
@@ -58,9 +65,14 @@ const Motor = (() => {
         tip: 'basla', benimNo: p.no, rol: p.rol, x: v.x, z: v.z, tipNo: v.tip,
         takim: p.rol === 'haydut' ? haydutNolar : serifNolar, serifler: serifNolar,
         takimAdlar: adlar(p.rol), serifAdlar: adlar('serif'),
-        ayar: o.ayar, haydutSayisi: hayN, serifSayisi: n - hayN, sure: ayar.sure * 60,
+        ayar: o.ayar, haydutSayisi: hayN, serifSayisi: n - hayN, sure: ayar.sure * 60, bekleme: BEKLEME,
       });
     });
+    serifYay();
+  }
+  // Şeriflerin adı ve kalan hakkı herkese (üst ortadaki panel)
+  function serifYay() {
+    cb.herkese({ tip: 'serifler', liste: o.oyuncular.filter(p => p.rol === 'serif').map(p => ({ ad: p.ad, hak: Math.max(0, p.hak), durum: p.durum })) });
   }
 
   const oyuncu = id => o?.oyuncular.find(p => p.id === id);
@@ -110,7 +122,7 @@ const Motor = (() => {
   function ates(p, v, hedefNo) {
     if (!canlimi(p) || p.rol !== 'serif' || !v) return;
     const simdi = Date.now();
-    if (simdi - p.sonAtes < ATES_ARA) return;
+    if (simdi - p.sonAtes < ATES_ARA || simdi < o.serifCikis) return;   // odadayken ateş yok
     p.sonAtes = simdi;
     const h = o.varliklar.get(hedefNo);
     const gecerli = h && h.durum === 0 && Math.hypot(h.x - v.x, h.z - v.z) < ATES_MENZIL;
@@ -134,10 +146,12 @@ const Motor = (() => {
       if (p.hak > 0) {
         bilgi(`❌ ${p.ad} masum bir kasabalıyı vurdu (${p.hak} hakkı kaldı)`, 'kotu');
         cb.kisiye(p.id, { tip: 'hak', hak: p.hak });
+        serifYay();
       } else {
         p.durum = 2; p.is = null;
         o.varliklar.get(p.no).durum = 2;
         bilgi(`⛓️ ${p.ad} masum birini vurdu ve hapse girdi!`, 'kotu');
+        serifYay();
         cb.kisiye(p.id, { tip: 'elendin', neden: 'hapis' });
       }
     }
@@ -152,13 +166,13 @@ const Motor = (() => {
       const nx = v.x + Math.sin(v.kacisYon) * KOS * dt, nz = v.z + Math.cos(v.kacisYon) * KOS * dt;
       const p = Kasaba.it(nx, nz);
       if (Math.hypot(p.x - nx, p.z - nz) > 0.05) v.kacisYon += rnd(0.8, 1.6);   // duvara çarptı, yön değiştir
-      v.x = p.x; v.z = p.z; v.yaw = donus(v.yaw, v.kacisYon, dt * 8);
+      v.x = p.x; v.z = p.z; v.yaw = donus(v.yaw, v.kacisYon, dt * 5, dt * 4);
       if (v.kacis <= 0) { v.bekle = rnd(0.5, 2); v.h = 0; }
       return;
     }
     if (v.bekle > 0) {
       v.bekle -= dt; v.h = 0;
-      if (v.bakis !== null) v.yaw = donus(v.yaw, v.bakis, dt * 4);
+      if (v.bakis !== null) v.yaw = donus(v.yaw, v.bakis, dt * 2.2, dt * 2);
       return;
     }
     if (!v.yol || !v.yol.length) {
@@ -169,17 +183,25 @@ const Motor = (() => {
       return;
     }
     const n = v.yol[0], dx = n.x - v.x, dz = n.z - v.z, d = Math.hypot(dx, dz);
-    if (d < 0.25) {
+    const sonNokta = v.yol.length === 1;
+    // Köşeleri keskin dönmesin: ara noktaya yaklaşınca bir sonrakine yönelir (köşeyi yuvarlar)
+    if (d < (sonNokta ? 0.3 : 1.4)) {
       v.yol.shift();
       if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; }
       return;
     }
     // Ara sıra caddede durup etrafa bakar
     if (Math.random() < dt * 0.025) { v.bekle = rnd(1, 3); v.bakis = v.yaw + rnd(-1.5, 1.5); return; }
-    const adim = Math.min(d, YURU * v.hizK * dt);
-    const p = Kasaba.it(v.x + dx / d * adim, v.z + dz / d * adim);
+    // Yön yavaş yavaş döner (oyuncunun karakteri gibi); çok ters yöndeyse yavaşlayıp döner
+    const hedefYon = Math.atan2(dx, dz);
+    v.yaw = donus(v.yaw, hedefYon, dt * DONUS * 1.6, dt * DONUS);
+    const fark = Math.abs(acıFark(v.yaw, hedefYon));
+    const yavas = fark > 1.4 ? 0.25 : fark > 0.7 ? 0.6 : 1;
+    const adim = Math.min(d, YURU * v.hizK * yavas * dt);
+    // Varış noktasına çok yakınken doğrudan git (etrafında dönüp durmasın)
+    const gx = sonNokta && d < 1.2 ? dx / d : Math.sin(v.yaw), gz = sonNokta && d < 1.2 ? dz / d : Math.cos(v.yaw);
+    const p = Kasaba.it(v.x + gx * adim, v.z + gz * adim);
     v.x = p.x; v.z = p.z; v.h = 1;
-    v.yaw = donus(v.yaw, Math.atan2(dx, dz), dt * 7);
     // Takıldıysa yeni yol
     v.ilerleme.t += dt;
     if (v.ilerleme.t > 4) {
@@ -187,15 +209,18 @@ const Motor = (() => {
       v.ilerleme = { t: 0, x: v.x, z: v.z };
     }
   }
-  function donus(a, b, k) {
-    let f = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
-    return a + f * Math.min(1, k);
-  }
+  function acıFark(a, b) { return ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; }
+  // k: yumuşaklık, enFazla: bir adımda en çok ne kadar dönebilir (radyan)
+  function donus(a, b, k, enFazla = Infinity) { const f = acıFark(a, b) * Math.min(1, k); return a + Math.max(-enFazla, Math.min(enFazla, f)); }
 
   // ---------- Her 100 ms ----------
   function adim(dt) {
     if (!o || o.asama !== 'oyun') return;
     const simdi = Date.now();
+    if (!o.kapiAcildi && simdi >= o.serifCikis) {   // şerif odasının kapısı açılır
+      o.kapiAcildi = true; Kasaba.odaKapisi(false);
+      cb.herkese({ tip: 'kapi', acik: true });
+    }
     o.varliklar.forEach(v => { if (!v.oyuncuId) npcAdim(v, dt); });
     // İşler (görev / kılık) bitti mi?
     o.oyuncular.forEach(p => {
@@ -304,8 +329,8 @@ const Motor = (() => {
   function koptu(id) {
     const p = oyuncu(id); if (!p || !o) return;
     const v = o.varliklar.get(p.no);
-    if (v && v.durum === 0) { v.oyuncuId = null; v.yol = null; v.bekle = 1; }
-    if (o.asama === 'oyun') { p.durum = 4; p.is = null; bilgi(`🚪 ${p.ad} oyundan ayrıldı`); kontrol(); }
+    if (v && v.durum === 0) { v.oyuncuId = null; v.yol = null; v.bekle = 1; if (v.tip === SERIF_TIP) v.tip = Math.floor(Math.random() * 10); }
+    if (o.asama === 'oyun') { p.durum = 4; p.is = null; bilgi(`🚪 ${p.ad} oyundan ayrıldı`); if (p.rol === 'serif') serifYay(); kontrol(); }
   }
 
   return { baslat, girdi, adim, koptu, get aktif() { return !!o && o.asama === 'oyun'; }, durdur() { o = null; } };

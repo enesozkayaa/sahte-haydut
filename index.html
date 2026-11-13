@@ -40,7 +40,8 @@
           <li><b>Şerif:</b> görev yapılınca sağ üstte en az 10 saniye gecikmeyle yazar ("12 sn önce"). O sırada orada kim vardı, düşün ve vur. Masum kasabalıyı vurursan hakkın azalır; biterse hapse girersin. 📡 Muhbir: bir sonraki bildirimi hemen görürsün (1 kere).</li>
           <li><b>Kazanma:</b> haydutlar görev hedefine ulaşırsa ya da süre biterse kazanır. Şerifler bütün haydutları vurursa kazanır.</li>
           <li>🎤 Yakınındakiler seni duyar. 📻 Telsizi açınca sadece takımın duyar. Ölenler sadece ölüleri duyar.</li>
-          <li>Bilgisayar: WASD yürü, Shift koş, fare bak, sol tık ateş, E görev, V kamera, T telsiz, M harita.</li>
+          <li>Oyun başında şerifler 15 saniye kilitli bir odada bekler; kapı açılınca kasabaya çıkarlar.</li>
+          <li>Bilgisayar: ekrana tıklayınca fareyle bakarsın. WASD yürü, Shift koş, sol tık ateş, E görev, V kamera, T telsiz, K mikrofon, M harita. Fareyi serbest bırakmak (tuşlara tıklamak) için ESC veya Alt.</li>
         </ul>
       </details>
     </div>
@@ -58,7 +59,7 @@
         <label>⏱️ Süre <select id="aySure"><option value="5">5 dk</option><option value="8" selected>8 dk</option><option value="10">10 dk</option><option value="15">15 dk</option></select></label>
         <label>🎯 Görev hedefi <select id="ayHedef"><option>5</option><option selected>8</option><option>10</option><option>12</option><option>15</option></select></label>
         <label>👥 Kasabalı sayısı <select id="ayKasabali"><option value="30">30</option><option value="45" selected>45</option><option value="60">60</option></select></label>
-        <label>👔 Kılık değiştirme hakkı <select id="ayKilik"><option>1</option><option selected>2</option><option>3</option></select></label>
+        <label>👔 Kılık değiştirme hakkı <select id="ayKilik"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
       </div>
       <p id="ayarOzet" class="durum"></p>
       <div class="satir">
@@ -97,7 +98,9 @@
     </div>
     <div id="joystick"><div id="joyTopuz"></div></div>
     <div id="elendiYazi" class="gizli"></div>
-    <div id="ipucu">Ekrana tıkla: fareyle bak · WASD yürü · Shift koş · E görev · V kamera · T telsiz · M harita</div>
+    <div id="bekleYazi" class="gizli"></div>
+    <div id="serifPanel"></div>
+    <div id="ipucu" class="serbest">🖱️ Ekrana tıkla: fareyle etrafa bak. Fareyi serbest bırakmak için ESC veya Alt.</div>
   </div>
 
   <!-- Sonuç -->

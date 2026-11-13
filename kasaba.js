@@ -49,6 +49,8 @@ const Kasaba = (() => {
     B('ev9', 'Ev', '🏠', 12, 60, 10, 9, 5, '#8a9a8a', 'k', 'ev'),
     B('ev10', 'Ev', '🏠', 70, 58, 10, 9, 5, '#b0a080', 'k', 'ev'),
   ];
+  // Su kulesi dışında her binaya girilir (ön + arka kapı)
+  binalar.forEach(b => { if (!b.ic && b.tur !== 'kule') b.ic = 1; });
   const icBinalar = binalar.filter(b => b.ic);
   // Katı olmayan alanlar (çit, mezarlık): haritada çizilir, içinden yürünür
   const alanlar = [
@@ -95,7 +97,7 @@ const Kasaba = (() => {
   const G = (id, ad, olay, emoji, sure, yer) => ({ id, ad, olay, emoji, sure, y: 0, kat: 0, ...yer });
   const gorevler = [
     G('banka', 'Banka kasasını soy', 'Banka kasası soyuldu', '🏦', 6, icNokta('banka', 4, -5)),
-    G('anahtar', 'Hapishane anahtarını çal', 'Hapishane anahtarı çalındı', '🔑', 5, kapiOnu('serif', -3)),
+    G('anahtar', 'Hapishane anahtarını çal', 'Şerif ofisinden hapishane anahtarı çalındı', '🔑', 5, icNokta('serif', -3, -3)),
     G('afis', 'Aranıyor afişlerini yırt', 'Aranıyor afişleri yırtıldı', '📜', 3, kapiOnu('serif', 4.5)),
     G('kasa', 'Salonun kasasından para al', 'Salonun kasası boşaltıldı', '💰', 4, icNokta('salon', 4, -1.6)),
     G('kumar', 'Üst katta kumar masasında hile yap', 'Salonun üst katında kumar masasında hile yapıldı', '🃏', 4, icNokta('salon', 3, -2, 1, Math.PI / 2)),
@@ -106,18 +108,18 @@ const Kasaba = (() => {
     G('tabanca', 'Silahçıdan tabanca çal', 'Silahçıdan tabanca çalındı', '🔫', 4, icNokta('silahci', 3, -3.2)),
     G('ekmek', 'Fırından ekmek çal', 'Fırından ekmek çalındı', '🍞', 3, icNokta('firin', 2.5, -3.2)),
     G('ilac', 'Doktordan ilaç çal', 'Doktordan ilaç çalındı', '💊', 4, icNokta('doktor', 2.5, -3.2)),
-    G('altin', 'Altın tozu çal', 'Madenciden altın tozu çalındı', '✨', 5, kapiOnu('madenci')),
+    G('altin', 'Altın tozu çal', 'Madenciden altın tozu çalındı', '✨', 5, icNokta('madenci', 2.5, -3)),
     G('kilit', 'Demircide kilit kır', 'Demircide kilit kırıldı', '🔨', 4, kapiOnu('demirci')),
-    G('bagis', 'Bağış kutusunu boşalt', 'Kilisenin bağış kutusu boşaltıldı', '⛪', 4, kapiOnu('kilise')),
+    G('bagis', 'Bağış kutusunu boşalt', 'Kilisenin bağış kutusu boşaltıldı', '⛪', 4, icNokta('kilise', 3, -6)),
     G('dinamit', 'Raya dinamit koy', 'Demiryoluna dinamit kondu', '🧨', 6, { x: -64, z: -72, yon: Math.PI }),
     G('su', 'Su kulesini del', 'Su kulesi delindi', '💧', 4, kapiOnu('sukulesi')),
-    G('kibrit', 'Samanlığa kibrit at', 'Samanlıkta yangın çıktı', '🔥', 4, kapiOnu('samanlik')),
-    G('at', 'Ahırdan at çal', 'Ahırdan at çalındı', '🐎', 5, kapiOnu('ahir')),
+    G('kibrit', 'Samanlığa kibrit at', 'Samanlıkta yangın çıktı', '🔥', 4, icNokta('samanlik', 3, -3)),
+    G('at', 'Ahırdan at çal', 'Ahırdan at çalındı', '🐎', 5, icNokta('ahir', -4, -2)),
     G('sigir', 'Sığırları ağıldan sal', 'Sığırlar ağıldan kaçtı', '🐄', 4, { x: -16, z: 54.5, yon: 0 }),
   ];
   // Kılık değiştirme noktaları
   const kiliklar = [
-    { id: 'terzi', ad: 'Terzi', ...kapiOnu('terzi') },
+    { id: 'terzi', ad: 'Terzi', ...icNokta('terzi', 2.5, -3) },
     { id: 'camasir', ad: 'Çamaşır ipi', x: 30, z: 52, yon: 0, y: 0, kat: 0 },
     { id: 'otelarka', ad: 'Otel deposu', x: 32, z: -29, yon: Math.PI, y: 0, kat: 0 },
   ];

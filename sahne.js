@@ -71,15 +71,16 @@ const Sahne = (() => {
     // Ana gövde (girilebilir binalar içi boş: duvar, kapı, merdiven, üst kat, eşyalar)
     const H = b.ic ? Kasaba.duvarY(b) : y * 0.78;
     if (b.ic) icCiz(b, duvar, kutuEkle); else kutuEkle(g, y * 0.78, d, 0, y * 0.39, 0, duvar);
+    // Eğik çatılı girilebilir binalarda düz tavan (duvar ile çatı arasından ışık sızmasın)
+    if (b.ic && (b.tur === 'ev' || b.tur === 'ambar' || b.id === 'kilise')) kutuEkle(g + 0.4, 0.2, d + 0.4, 0, H + 0.1, 0, cati);
     // Çatı
     if (b.tur === 'ambar') {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(g * 0.55, g * 0.55, d, 4, 1, false, Math.PI / 4), cati);
-      c.rotation.z = Math.PI / 2; c.rotation.x = Math.PI / 2; c.scale.set(1, 1, 0.5); c.position.y = y * 0.78; grup.add(c);
-      kutuEkle(g * 0.4, y * 0.5, 0.2, 0, y * 0.25, d / 2 + 0.05, mat('#f3efe6'));
-      kutuEkle(g * 0.36, y * 0.46, 0.22, 0, y * 0.25, d / 2 + 0.08, mat(koyu(b.renk, 0.8)));
+      c.rotation.z = Math.PI / 2; c.rotation.x = Math.PI / 2; c.scale.set(1, 1, 0.5); c.position.y = H; grup.add(c);
+      if (!b.ic) { kutuEkle(g * 0.4, y * 0.5, 0.2, 0, y * 0.25, d / 2 + 0.05, mat('#f3efe6')); kutuEkle(g * 0.36, y * 0.46, 0.22, 0, y * 0.25, d / 2 + 0.08, mat(koyu(b.renk, 0.8))); }
     } else if (b.tur === 'ev' || b.id === 'kilise') {
       const egim = new THREE.Mesh(new THREE.CylinderGeometry(0.01, g * 0.62, y * 0.4, 4, 1), cati);
-      egim.rotation.y = Math.PI / 4; egim.scale.set(1, 1, d / g); egim.position.y = y * 0.78 + y * 0.2; grup.add(egim);
+      egim.rotation.y = Math.PI / 4; egim.scale.set(1, 1, d / g); egim.position.y = H + y * 0.2; grup.add(egim);
     } else {
       kutuEkle(g + (b.ic ? 0.4 : 0), 0.3, d + (b.ic ? 0.4 : 0), 0, H + 0.15, 0, cati);
       // Batı tarzı yüksek ön cephe
@@ -192,6 +193,33 @@ const Sahne = (() => {
       case 'firin':
         k(2, 1.6, 1.2, -2.5, 0.8, -d2 + 0.8, mat('#9a4a2a')); k(0.8, 0.5, 0.1, -2.5, 0.8, -d2 + 1.42, mat('#ff7a2a', { emissive: '#aa4a10' }));
         k(3, 1.2, 0.6, 2.5, 0.6, -d2 + 0.5, ahsap); for (let i = 0; i < 4; i++) k(0.4, 0.2, 0.3, 1.4 + i * 0.7, 1.3, -d2 + 0.5, mat('#e2a85a')); break;
+      case 'serif':   // hapishane parmaklıkları ve masa
+        for (let i = 0; i < 7; i++) k(0.08, 2.4, 0.08, -g2 + 0.6 + i * 0.5, 1.2, -1.5, metal);
+        k(3.6, 0.1, 0.1, -g2 + 2.1, 2.4, -1.5, metal); masa(3, 1); k(0.3, 0.06, 0.2, -3, 1.2, -d2 + 0.3, mat('#c9a23a')); break;
+      case 'terzi':   // mankenler ve kumaş rafı
+        [[-2.5, -1], [-1, 1.5]].forEach(([x, z]) => { k(0.5, 1.1, 0.35, x, 1.2, z, mat('#c06090')); k(0.08, 0.6, 0.08, x, 0.3, z, ahsap); });
+        k(3, 1.8, 0.5, 2.5, 0.9, -d2 + 0.35, ahsap); ['#c94f3d', '#4a6fa5', '#4f8a3c'].forEach((c, i) => k(0.8, 0.3, 0.4, 1.6 + i * 0.9, 1.3, -d2 + 0.4, mat(c))); break;
+      case 'madenci':   // çuvallar, kazma, altın tartısı
+        for (let i = 0; i < 3; i++) k(0.7, 0.8, 0.6, -3 + i * 0.9, 0.4, -d2 + 0.6, mat('#a08a5a'));
+        k(2.6, 1, 0.7, 2.5, 0.5, -d2 + 0.6, ahsap); k(0.4, 0.15, 0.4, 2.5, 1.08, -d2 + 0.6, mat('#e8c84a')); break;
+      case 'demirci':   // örs ve alet duvarı
+        k(0.9, 0.35, 0.4, -2, 0.85, -1, metal); k(0.4, 0.7, 0.3, -2, 0.35, -1, koyu2); k(4, 1.6, 0.15, 2, 1.6, -d2 + 0.3, koyu2); break;
+      case 'kilise':   // sıralar ve kürsü
+        for (let i = 0; i < 4; i++) [-1, 1].forEach(sv => k(4, 0.5, 0.6, sv * 3.2, 0.25, 3 - i * 2, ahsap));
+        k(2.2, 1.1, 1, 0, 0.55, -d2 + 1.5, beyaz); k(0.6, 0.6, 0.4, 3, 0.3, -d2 + 2.4, mat('#8a6a3a')); break;
+      case 'istasyon':   // bilet gişesi ve banklar
+        k(4, 1.1, 0.7, 6, 0.55, -1.5, ahsap); [-6, -2].forEach(x => k(3, 0.5, 0.6, x, 0.25, 1.5, ahsap)); break;
+      case 'samanlik':   // saman balyaları
+        for (let i = 0; i < 6; i++) k(1.4, 1, 1, -4 + (i % 3) * 1.6, 0.5 + Math.floor(i / 3), -d2 + 1, mat('#e2c46b'));
+        k(1.4, 1, 1, 4.5, 0.5, -d2 + 1, mat('#e2c46b')); break;
+      case 'ahir':   // bölmeler ve atlar
+        for (let i = 0; i < 4; i++) {
+          const x = -7 + i * 3.6; k(0.15, 1.4, 3, x - 1.6, 0.7, -d2 + 1.7, ahsap);
+          k(0.7, 0.9, 1.8, x, 1.1, -d2 + 1.4, mat(i % 2 ? '#6a4020' : '#3a2a1a')); k(0.4, 0.5, 0.7, x, 1.6, -d2 + 2.5, mat(i % 2 ? '#6a4020' : '#3a2a1a'));
+        } break;
+      default:
+        if (b.tur === 'ev') { k(2, 0.5, 1.2, -g2 + 1.5, 0.25, -d2 + 1, beyaz); masa(1.5, 0.5); k(1.2, 1.6, 0.5, g2 - 1, 0.8, -d2 + 0.35, ahsap); }
+        break;
       case 'doktor':
         k(2, 0.6, 1, -2.5, 0.3, -d2 + 1, beyaz); k(1.6, 1.8, 0.5, 2.5, 0.9, -d2 + 0.35, beyaz);
         for (let i = 0; i < 4; i++) k(0.12, 0.25, 0.12, 1.9 + i * 0.4, 1.4, -d2 + 0.6, mat('#4a8ab0')); break;

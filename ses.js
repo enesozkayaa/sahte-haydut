@@ -36,6 +36,8 @@ const Ses = (() => {
     kotu() { ton(300, 0.3, 'sawtooth', 0.08, 0, -150); },
     hapis() { ton(160, 0.5, 'sawtooth', 0.1, 0, -60); gurultu(0.3, 0.3, 600, 'lowpass', 0.05); },
     posta() { [1568, 1175, 1568].forEach((f, i) => ton(f, 0.35, 'sine', 0.14, i * 0.16)); },   // posta zili
+    // Koşan birinin ayak sesi (s: 0..1 yakınlık). Toprak zeminde tok bir 'tap'
+    adim(s = 1) { if (s < 0.03) return; gurultu(0.07, 0.55 * s, 500 + Math.random() * 300); ton(70 + Math.random() * 25, 0.06, 'sine', 0.12 * s); },
     tik() { ton(1200, 0.03, 'square', 0.03); },
     kazandi() { [392, 523, 659, 784, 1046].forEach((f, i) => ton(f, 0.25, 'triangle', 0.13, i * 0.12)); },
     kaybetti() { [392, 330, 262, 196].forEach((f, i) => ton(f, 0.3, 'triangle', 0.12, i * 0.16)); },

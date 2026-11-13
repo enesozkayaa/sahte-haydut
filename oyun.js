@@ -719,6 +719,22 @@
     if (!buyuk) { x.font = `900 ${Math.round(13 * olcek)}px Nunito, sans-serif`; x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 3; x.textAlign = 'right'; x.strokeText('M: büyüt', N - 6, N - 8); x.fillText('M: büyüt', N - 6, N - 8); }
   }
 
+  // Koşanların ayak sesi: yakındaysa yüksek, ~22 m'den sonra duyulmaz (şerif koşan haydudu duyar)
+  const ADIM_ARA = 0.29, DUYMA = 22;
+  function ayakSesleri(dt) {
+    const dx0 = oyun.canli ? oyun.x : Sahne.kamera.position.x, dz0 = oyun.canli ? oyun.z : Sahne.kamera.position.z;
+    varliklar.forEach((v, no) => {
+      const ben = no === oyun.benimNo;
+      const kosuyor = ben ? oyun.canli && oyun.h === 2 : v.h === 2 && v.durum === 0;
+      if (!kosuyor) { v.adimT = 0; return; }
+      v.adimT = (v.adimT || 0) + dt;
+      if (v.adimT < ADIM_ARA) return;
+      v.adimT -= ADIM_ARA;
+      const d = ben ? 0 : Math.hypot(v.x - dx0, v.z - dz0) + Math.abs(v.y - oyun.y) * 2;
+      if (d < DUYMA) Ses.adim(ben ? 0.45 : Math.pow(1 - d / DUYMA, 1.5));
+    });
+  }
+
   // Sadece yerel testte: durumu dışarıdan görmek için
   if (location.hostname === 'localhost') window.arTest = { oyun: () => oyun, varliklar, eylem, ates, nisanHedefi };
 
@@ -730,7 +746,8 @@
     if (!oyun) { if (!$('hud').classList.contains('gizli')) Sahne.ciz(); return; }
     bekleGuncelle(t);
     if (!oyun.kapiAcik && t > oyun.kapiAcilis + 2000) kapiAcildi();   // evden haber gelmezse yine de aç
-    Sahne.kapiCanlandir(dt);
+    Sahne.kapiCanlandir(dt); Sahne.susAnim(dt);
+    ayakSesleri(dt);
     hareket(dt);
     const izleNo = izlenen();
     varliklar.forEach((v, no) => {

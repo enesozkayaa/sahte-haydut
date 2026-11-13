@@ -19,7 +19,7 @@ const Sahne = (() => {
     scene.add(new THREE.HemisphereLight('#fff3dc', '#a0703f', 0.95));
     const gunes = new THREE.DirectionalLight('#fff0d0', 0.9); gunes.position.set(60, 100, 30); scene.add(gunes);
     addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
-    zemin(); Kasaba.binalar.forEach(bina); alanlarCiz(); engellerCiz(); demiryolu(); tepeler(); sokakSusleri(); serifOdasiCiz(); gorevEsyalari();
+    zemin(); Kasaba.binalar.forEach(bina); alanlarCiz(); engellerCiz(); demiryolu(); tepeler(); sokakSusleri(); serifOdasiCiz(); gorevEsyalari(); susleriCiz(); afisleriAs(); hareketliSusler();
     return { scene, kamera, renderer };
   }
 
@@ -351,5 +351,190 @@ const Sahne = (() => {
     for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 10), mat(i % 2 ? '#c92a2a' : '#f2f2f2')); m.position.y = 1.2 + i * 0.2; direk.add(m); }
   }
 
-  return { get berberUstasi() { return usta; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
+  // ---------- Süsler: ağaçlar, atlar, sandıklar, değirmen, kaya, ot ----------
+  const susGeo = {}, sg = (ad, yap) => susGeo[ad] || (susGeo[ad] = yap());
+  let degirmenPervane = null;
+  function susleriCiz() {
+    const yaprak = [mat('#5f8a3a'), mat('#6f9a44'), mat('#7a8f3a')], govde = mat('#6a4a2c'), kuru = mat('#7a5a3a');
+    Kasaba.susler.forEach(e => {
+      const g = new THREE.Group(); g.position.set(e.x, 0, e.z); g.rotation.y = e.yon; scene.add(g);
+      const ek = (geo, m, x, y, z) => { const k = new THREE.Mesh(geo, m); k.position.set(x, y, z); g.add(k); return k; };
+      switch (e.tur) {
+        case 'agac': {   // yeşil, yuvarlak taçlı ağaç
+          const boy = 3 + e.cesit * 0.8;
+          ek(sg('govde', () => new THREE.CylinderGeometry(0.22, 0.32, 1, 7)), govde, 0, boy / 2, 0).scale.y = boy;
+          const tac = sg('tac', () => new THREE.IcosahedronGeometry(1, 0));
+          ek(tac, yaprak[e.cesit], 0, boy + 0.6, 0).scale.set(1.8, 1.4, 1.8);
+          ek(tac, yaprak[(e.cesit + 1) % 3], 0.9, boy + 0.1, 0.3).scale.set(1.2, 1, 1.2);
+          ek(tac, yaprak[(e.cesit + 2) % 3], -0.7, boy + 0.3, -0.5).scale.set(1.1, 0.95, 1.1);
+          break;
+        }
+        case 'kuruAgac': {   // dalları çıplak çöl ağacı
+          ek(sg('govde', () => new THREE.CylinderGeometry(0.22, 0.32, 1, 7)), kuru, 0, 1.6, 0).scale.y = 3.2;
+          const dal = sg('dal', () => new THREE.CylinderGeometry(0.06, 0.11, 1.6, 5));
+          [[0.6, 2.4, 0.9], [-0.7, 2.0, -0.8], [0.2, 2.9, -1.1], [-0.3, 2.6, 1.2]].forEach(([dx, y, a]) => { const d = ek(dal, kuru, dx * 0.5, y, 0); d.rotation.z = a; d.rotation.y = dx; });
+          break;
+        }
+        case 'at': {   // bağlama direğine bağlı at
+          const renk = mat(['#6a4020', '#3a2a1a', '#c9b08a'][e.cesit]), koyu = mat('#2a1a10');
+          ek(sg('atGovde', () => new THREE.BoxGeometry(0.6, 0.7, 1.6)), renk, 0, 1.25, 0);
+          const boyun = ek(sg('atBoyun', () => new THREE.BoxGeometry(0.35, 0.8, 0.4)), renk, 0, 1.7, 0.75); boyun.rotation.x = 0.5;
+          ek(sg('atBas', () => new THREE.BoxGeometry(0.3, 0.35, 0.7)), renk, 0, 2.05, 1.15);
+          ek(sg('atYele', () => new THREE.BoxGeometry(0.08, 0.6, 0.35)), koyu, 0, 1.85, 0.6).rotation.x = 0.5;
+          ek(sg('atKuyruk', () => new THREE.BoxGeometry(0.12, 0.7, 0.12)), koyu, 0, 1.0, -0.85).rotation.x = -0.3;
+          [[-0.2, -0.6], [0.2, -0.6], [-0.2, 0.6], [0.2, 0.6]].forEach(([x, z]) => ek(sg('atBacak', () => new THREE.BoxGeometry(0.14, 0.9, 0.14)), renk, x, 0.45, z));
+          ek(sg('eyer', () => new THREE.BoxGeometry(0.66, 0.12, 0.6)), mat('#5a2a14'), 0, 1.62, -0.05);
+          const direk = sg('direk', () => new THREE.BoxGeometry(0.15, 1.1, 0.15));
+          ek(direk, govde, 0.9, 0.55, 1.1); ek(direk, govde, 0.9, 0.55, -0.6);
+          ek(sg('ray', () => new THREE.BoxGeometry(0.1, 0.1, 1.9)), govde, 0.9, 1.05, 0.25);
+          break;
+        }
+        case 'sandik': {   // sandık ve fıçı yığını
+          const tahta = mat(['#8a6440', '#7a5530', '#9a7448'][e.cesit]), kutu = sg('sandik', () => new THREE.BoxGeometry(0.8, 0.8, 0.8));
+          ek(kutu, tahta, -0.35, 0.4, 0);
+          ek(kutu, tahta, 0.45, 0.4, 0.1).rotation.y = 0.3;
+          ek(kutu, tahta, 0.05, 1.2, 0.05).rotation.y = -0.2;
+          ek(sg('fici', () => new THREE.CylinderGeometry(0.35, 0.35, 0.9, 10)), mat('#6a4422'), 0.2, 0.45, -0.75);
+          break;
+        }
+        case 'degirmen': {   // yel değirmeni
+          [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]].forEach(([x, z]) => { const a = ek(new THREE.BoxGeometry(0.15, 9, 0.15), govde, x * 0.6, 4.5, z * 0.6); a.rotation.z = -x * 0.08; a.rotation.x = z * 0.08; });
+          ek(new THREE.BoxGeometry(0.6, 0.6, 0.9), mat('#8a8a90'), 0, 9.2, 0);
+          degirmenPervane = new THREE.Group(); degirmenPervane.position.set(0, 9.2, 0.55); g.add(degirmenPervane);
+          for (let i = 0; i < 6; i++) { const k = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.8, 0.05), mat('#c9c9cf')); k.position.y = 1; const kol = new THREE.Group(); kol.rotation.z = i * Math.PI / 3; kol.add(k); degirmenPervane.add(kol); }
+          ek(new THREE.BoxGeometry(0.1, 0.8, 1.6), mat('#b03030'), 0, 9.2, -1.2);
+          ek(new THREE.CylinderGeometry(1.1, 1.1, 1.2, 12), mat('#7a6a5a'), 1.8, 0.6, 0);   // su deposu
+          break;
+        }
+        case 'ficiYigin': {   // bina köşesinde fıçılar ve bir sandık
+          const fici = sg('fici', () => new THREE.CylinderGeometry(0.35, 0.35, 0.9, 10)), m = mat(['#6a4422', '#7a5028', '#5a3a1c'][e.cesit]), cember = mat('#3a3a40');
+          ek(fici, m, -0.25, 0.45, 0); ek(fici, m, 0.3, 0.45, 0.15); ek(fici, m, 0.02, 1.35, 0.06);
+          ek(sg('cember', () => new THREE.CylinderGeometry(0.36, 0.36, 0.06, 10)), cember, -0.25, 0.7, 0);
+          ek(sg('cember', () => new THREE.CylinderGeometry(0.36, 0.36, 0.06, 10)), cember, 0.3, 0.7, 0.15);
+          break;
+        }
+        case 'bank': {   // sundurmada tahta bank
+          const t = mat('#7a5530');
+          ek(sg('bankOturak', () => new THREE.BoxGeometry(1.4, 0.08, 0.4)), t, 0, 0.45, 0);
+          ek(sg('bankSirt', () => new THREE.BoxGeometry(1.4, 0.4, 0.06)), t, 0, 0.72, -0.2);
+          [-0.6, 0.6].forEach(x => ek(sg('bankAyak', () => new THREE.BoxGeometry(0.08, 0.45, 0.36)), t, x, 0.22, 0));
+          break;
+        }
+        case 'kaya': {
+          const k = ek(sg('kaya', () => new THREE.DodecahedronGeometry(0.5, 0)), mat(['#9a8a7a', '#8a7a6a', '#a89a88'][e.cesit]), 0, 0.2, 0);
+          k.scale.set(1 + e.cesit * 0.4, 0.6 + e.cesit * 0.2, 1 + e.cesit * 0.3);
+          break;
+        }
+        case 'ot': {   // kuru ot tutamı
+          const m = mat(['#a8a05a', '#8f9a4a', '#b8a868'][e.cesit]);
+          for (let i = 0; i < 3; i++) { const o = ek(sg('ot', () => new THREE.ConeGeometry(0.12, 0.6, 4)), m, (i - 1) * 0.15, 0.3, (i % 2) * 0.1); o.rotation.z = (i - 1) * 0.35; }
+          break;
+        }
+      }
+    });
+  }
+
+  // ---------- Duvarlarda ARANIYOR / KAYIP afişleri ve meydanda ilan tahtası ----------
+  const AFISLER = [
+    { ust: 'ARANIYOR', resim: 'yuz', alt: 'ÖDÜL $500', not: 'Kara Bıyık' },
+    { ust: 'ARANIYOR', resim: 'yuz2', alt: 'ÖDÜL $1000', not: 'Tek Göz Rıza' },
+    { ust: 'ARANIYOR', resim: 'yuz', alt: 'ÖLÜ YA DA DİRİ', not: 'Sahte Haydut' },
+    { ust: 'KAYIP', resim: 'at', alt: 'Adı: Kara Şimşek', not: 'Görenler şerife' },
+    { ust: 'KAYIP', resim: 'kopek', alt: 'Adı: Karabaş', not: 'Ödül: 5 altın' },
+    { ust: 'KAYIP', resim: 'kedi', alt: 'Adı: Pamuk', not: 'Fırının kedisi' },
+    { ust: 'KAYIP', resim: 'inek', alt: 'Benekli inek', not: 'Ağıldan kaçtı' },
+  ];
+  const afisDokulari = [];
+  function afisDokusu(a) {
+    const c = document.createElement('canvas'); c.width = 200; c.height = 260;
+    const x = c.getContext('2d');
+    x.fillStyle = '#efdcae'; x.fillRect(0, 0, 200, 260);
+    const kenar = x.createRadialGradient(100, 130, 60, 100, 130, 170); kenar.addColorStop(0, 'rgba(0,0,0,0)'); kenar.addColorStop(1, 'rgba(110,70,20,0.45)');
+    x.fillStyle = kenar; x.fillRect(0, 0, 200, 260);
+    x.fillStyle = a.ust === 'KAYIP' ? '#1f3a6a' : '#5a1a0e'; x.textAlign = 'center';
+    x.font = 'bold 36px Georgia, serif'; x.fillText(a.ust, 100, 42, 186);
+    x.fillStyle = '#3b2414';
+    const cx = 100, cy = 128;
+    if (a.resim === 'yuz' || a.resim === 'yuz2') {
+      x.beginPath(); x.ellipse(cx, cy + 6, 32, 38, 0, 0, 7); x.fill();
+      x.beginPath(); x.ellipse(cx, cy - 26, 62, 10, 0, 0, 7); x.fill(); x.fillRect(cx - 30, cy - 58, 60, 34);
+      x.fillStyle = '#efdcae'; x.fillRect(cx - 18, cy, 12, 5);
+      if (a.resim === 'yuz') x.fillRect(cx + 6, cy, 12, 5); else { x.fillStyle = '#3b2414'; x.fillRect(cx + 4, cy - 4, 16, 10); }
+      x.fillStyle = '#3b2414'; x.fillRect(cx - 18, cy + 18, 36, 6);
+    } else if (a.resim === 'at') {
+      x.fillRect(cx - 40, cy - 10, 70, 30); x.fillRect(cx + 20, cy - 40, 16, 40); x.fillRect(cx + 20, cy - 46, 34, 16);
+      [-36, -20, 8, 22].forEach(l => x.fillRect(cx + l, cy + 18, 8, 30)); x.fillRect(cx - 52, cy - 6, 14, 6);
+    } else if (a.resim === 'kopek') {
+      x.fillRect(cx - 34, cy, 56, 24); x.fillRect(cx + 14, cy - 24, 26, 26); x.fillRect(cx + 34, cy - 14, 12, 10); x.fillRect(cx + 16, cy - 32, 8, 10);
+      [-30, -16, 4, 14].forEach(l => x.fillRect(cx + l, cy + 22, 7, 20)); x.fillRect(cx - 46, cy - 6, 14, 6);
+    } else if (a.resim === 'kedi') {
+      x.beginPath(); x.ellipse(cx - 6, cy + 16, 30, 22, 0, 0, 7); x.fill(); x.beginPath(); x.arc(cx + 22, cy - 10, 16, 0, 7); x.fill();
+      x.beginPath(); x.moveTo(cx + 10, cy - 20); x.lineTo(cx + 14, cy - 36); x.lineTo(cx + 22, cy - 24); x.fill();
+      x.beginPath(); x.moveTo(cx + 24, cy - 24); x.lineTo(cx + 32, cy - 36); x.lineTo(cx + 36, cy - 20); x.fill();
+      x.fillRect(cx - 42, cy + 2, 8, 30);
+    } else {   // inek
+      x.fillRect(cx - 40, cy - 8, 68, 32); x.fillRect(cx + 26, cy - 18, 24, 22); [-36, -20, 8, 20].forEach(l => x.fillRect(cx + l, cy + 22, 8, 22));
+      x.fillStyle = '#efdcae'; x.fillRect(cx - 24, cy - 2, 18, 12); x.fillRect(cx + 4, cy + 6, 12, 10);
+    }
+    x.fillStyle = '#5a1a0e'; x.font = 'bold 24px Georgia, serif'; x.fillText(a.alt, 100, 214, 186);
+    x.fillStyle = '#3b2414'; x.font = 'italic 18px Georgia, serif'; x.fillText(a.not, 100, 242, 186);
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+    return new THREE.MeshLambertMaterial({ map: t });
+  }
+  function afisleriAs() {
+    AFISLER.forEach(a => afisDokulari.push(afisDokusu(a)));
+    const afisGeo = new THREE.PlaneGeometry(0.62, 0.8);
+    let sira = 0;
+    Kasaba.binalar.forEach(b => {
+      if (b.tur === 'kule' || b.tur === 'ambar') return;
+      const on = b.ic ? b.d / 2 + Kasaba.DUVAR / 2 + 0.03 : b.d / 2 + 0.03;
+      const yerler = b.tur === 'ev' ? [1.9] : [2.15, -2.15];
+      yerler.forEach((u, i) => {
+        if ((sira + i) % 3 === 2) return;   // her yere değil
+        const m = new THREE.Mesh(afisGeo, afisDokulari[(sira * 3 + i) % afisDokulari.length]);
+        const p = Kasaba.dunya(b, u, on);
+        m.position.set(p.x, 1.65 + ((sira + i) % 2) * 0.12, p.z); m.rotation.y = b.kapi === 'k' ? Math.PI : 0; m.rotation.z = ((sira * 7 + i) % 5 - 2) * 0.03;
+        scene.add(m);
+      });
+      sira++;
+    });
+    // Meydanda ilan tahtası (caddeye bakar)
+    const g = new THREE.Group(); g.position.set(-14, 0, 9.6); scene.add(g);
+    const ahsap = mat('#6a4424');
+    [-1.4, 1.4].forEach(x => { const d = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.4, 0.15), ahsap); d.position.set(x, 1.2, 0); g.add(d); });
+    const pano = new THREE.Mesh(new THREE.BoxGeometry(3, 1.6, 0.1), mat('#8a6440')); pano.position.set(0, 1.55, 0); g.add(pano);
+    const ust = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.12, 0.5), mat('#4a2e18')); ust.position.set(0, 2.45, 0); g.add(ust);
+    const baslik = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.4), tabela('İLAN TAHTASI')); baslik.position.set(0, 2.15, -0.06); baslik.rotation.y = Math.PI; g.add(baslik);
+    [-1, 0, 1].forEach((x, i) => { const m = new THREE.Mesh(afisGeo, afisDokulari[(i * 2 + 1) % afisDokulari.length]); m.position.set(x * 0.9, 1.45, -0.06); m.rotation.y = Math.PI; m.rotation.z = (i - 1) * 0.05; g.add(m); });
+  }
+
+  // ---------- Hareketli süsler: yuvarlanan çalı topları, bulutlar, değirmen ----------
+  const calilar = [], bulutlar = [];
+  function hareketliSusler() {
+    const cali = mat('#a8884a'), tel = new THREE.MeshLambertMaterial({ color: '#a8884a', wireframe: true });
+    for (let i = 0; i < 4; i++) {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 1), tel);
+      m.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), cali));
+      m.userData = { x: -90 + i * 45, z: (i % 2 ? 4.5 : -4.5) + i * 0.4, hiz: 2.2 + i * 0.4 };
+      scene.add(m); calilar.push(m);
+    }
+    const bulutMat = new THREE.MeshLambertMaterial({ color: '#fffaf0', transparent: true, opacity: 0.85 });
+    const bulutGeo = new THREE.IcosahedronGeometry(1, 1);
+    for (let i = 0; i < 9; i++) {
+      const g = new THREE.Group();
+      for (let j = 0; j < 4; j++) { const k = new THREE.Mesh(bulutGeo, bulutMat); k.scale.set(6 + j, 2.5, 5); k.position.set(j * 5 - 7, (j % 2) * 1.2, (j % 3) * 2); g.add(k); }
+      g.position.set(-180 + i * 45, 55 + (i % 3) * 8, -120 + (i * 53) % 240); scene.add(g); bulutlar.push(g);
+    }
+  }
+  function susAnim(dt) {
+    calilar.forEach(m => {
+      const u = m.userData; u.x += u.hiz * dt; if (u.x > 95) u.x = -95;
+      m.position.set(u.x, 0.45 + Math.abs(Math.sin(u.x * 1.3)) * 0.25, u.z + Math.sin(u.x * 0.2) * 1.2);
+      m.rotation.z -= u.hiz * dt / 0.45;
+    });
+    bulutlar.forEach(b => { b.position.x += dt * 1.5; if (b.position.x > 220) b.position.x = -220; });
+    if (degirmenPervane) degirmenPervane.rotation.z += dt * 1.2;
+  }
+
+  return { susAnim, get berberUstasi() { return usta; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
 })();

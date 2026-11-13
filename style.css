@@ -7,6 +7,7 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 #9a7a4a; }
 button:disabled { opacity: .5; }
 button.ana { background: linear-gradient(#e0533a, #b5321e); color: #fff6e0; box-shadow: 0 4px 0 #6a1a0e; font-size: 18px; }
 button.kucuk { padding: 4px 8px; font-size: 14px; }
+#rolSecim button.secili { background: #ffd23f; box-shadow: 0 3px 0 #9a7a1a, 0 0 0 3px #5a1a0e inset; }
 input, select { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 2px solid #9a7a4a; background: #fff8e8; color: #2a1608; }
 
 /* Ekranlar */
@@ -62,6 +63,13 @@ label { font-weight: 800; font-size: 14px; }
 #atesBtn { width: 84px !important; height: 84px !important; font-size: 36px !important; background: #b5321ecc !important; }
 #muhbirBtn.aktif { box-shadow: 0 0 0 4px #ffd23f !important; }
 #kosBtn.basili { background: #ffd23f99 !important; }
+#nisanBtn.basili { background: #ffffff99 !important; }
+#gorevPanel { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 128px); pointer-events: auto; max-width: 230px; }
+#gorevPanel > button { padding: 5px 10px; font-size: 14px; background: #0007; color: #fff; box-shadow: none; }
+#gorevListe { list-style: none; margin: 4px 0 0; padding: 6px 8px; background: #0008; border-radius: 8px; max-height: min(42vh, calc(100vh - 380px)); min-height: 80px; overflow-y: auto; font-size: 13px; font-weight: 800; }
+#gorevListe li { padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#gorevListe li.yapildi { text-decoration: line-through; opacity: .5; }
+@media (max-width: 600px) { #gorevPanel { top: calc(max(10px, env(safe-area-inset-top)) + 100px); max-width: 170px; } #gorevListe { font-size: 11px; max-height: 34vh; } }
 #ustSag { position: absolute; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); display: flex; gap: 6px; }
 #ustSag button { width: 42px; height: 42px; padding: 0; font-size: 20px; border-radius: 10px; background: #0007; color: #fff; box-shadow: none; }
 #ustSag button.kapali { opacity: .45; } #ustSag button.acik { background: #2a8a3acc; } #telsizBtn.acik { background: #d08a1acc; }

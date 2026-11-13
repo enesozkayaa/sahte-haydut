@@ -1,15 +1,18 @@
 // =============================================================
 // Sahte Haydut - kasaba haritası: binalar, görevler, kılık noktaları, yürüme ağı
 // Herkeste aynı (rastgele değil). Koordinatlar metre: x doğu (+), z güney (+).
+// Bazı binalara girilir (ic: 1 tek kat, 2 iki kat): ön + arka kapı, iki katlılarda merdiven.
 // =============================================================
 
 const Kasaba = (() => {
   const SINIR = 92;            // kasaba -92..92
   const CADDE = 9;             // ana cadde z -9..9
   const ARA = 8;               // ara sokak x -8..8
+  const KAT_Y = 3.2;           // üst katın zemin yüksekliği
+  const DUVAR = 0.4, KAPI = 2.2;
 
-  // Bina: id, ad, emoji, x, z (merkez), g (x boyu), d (z boyu), y (yükseklik), renk, kapi ('g' = kapı +z yönünde, 'k' = -z yönünde)
-  const B = (id, ad, emoji, x, z, g, d, y, renk, kapi, tur = 'bina') => ({ id, ad, emoji, x, z, g, d, y, renk, kapi, tur });
+  // Bina: id, ad, emoji, x, z (merkez), g (x boyu), d (z boyu), y (yükseklik), renk, kapi ('g' = kapı +z yönünde, 'k' = -z yönünde), ic (girilebilir: 1/2 kat)
+  const B = (id, ad, emoji, x, z, g, d, y, renk, kapi, tur = 'bina', ic = 0) => ({ id, ad, emoji, x, z, g, d, y, renk, kapi, tur, ic });
   const kz = d => -(CADDE + 2 + d / 2);   // cadde kuzeyi (kapı caddeye bakar → 'g')
   const gz = d => CADDE + 2 + d / 2;      // cadde güneyi ('k')
 
@@ -17,17 +20,17 @@ const Kasaba = (() => {
     // Kuzey sıra
     B('ev1', 'Ev', '🏠', -76, kz(10), 10, 10, 5, '#a8826a', 'g', 'ev'),
     B('serif', 'Şerif Ofisi', '⭐', -61, kz(11), 13, 11, 6, '#8a5a3c', 'g'),
-    B('banka', 'Banka', '🏦', -45, kz(13), 15, 13, 8, '#b9a27a', 'g'),
-    B('salon', 'Salon', '🥃', -25, kz(15), 18, 15, 8.5, '#9c4f2e', 'g'),
-    B('otel', 'Otel', '🏨', 19, kz(15), 18, 15, 11, '#6f7f5a', 'g'),
-    B('postane', 'Postane', '✉️', 38, kz(11), 13, 11, 6.5, '#7b8fa3', 'g'),
-    B('belediye', 'Belediye', '🏛️', 55, kz(13), 15, 13, 8, '#c8b48a', 'g'),
+    B('banka', 'Banka', '🏦', -45, kz(13), 15, 13, 8, '#b9a27a', 'g', 'bina', 1),
+    B('salon', 'Salon', '🥃', -25, kz(15), 18, 15, 9, '#9c4f2e', 'g', 'bina', 2),
+    B('otel', 'Otel', '🏨', 19, kz(15), 18, 15, 11, '#6f7f5a', 'g', 'bina', 2),
+    B('postane', 'Postane', '✉️', 38, kz(11), 13, 11, 6.5, '#7b8fa3', 'g', 'bina', 1),
+    B('belediye', 'Belediye', '🏛️', 55, kz(13), 15, 13, 9, '#c8b48a', 'g', 'bina', 2),
     B('ev2', 'Ev', '🏠', 73, kz(10), 11, 10, 5, '#8fa07a', 'g', 'ev'),
     // Güney sıra
     B('ev3', 'Ev', '🏠', -76, gz(10), 10, 10, 5, '#b0907a', 'k', 'ev'),
-    B('silahci', 'Silahçı', '🔫', -62, gz(10), 12, 10, 6, '#5d4a3a', 'k'),
-    B('firin', 'Fırın', '🍞', -48, gz(10), 11, 10, 5.5, '#c98b52', 'k'),
-    B('doktor', 'Doktor', '💊', -35, gz(10), 11, 10, 6, '#e0d6c2', 'k'),
+    B('silahci', 'Silahçı', '🔫', -62, gz(10), 12, 10, 6, '#5d4a3a', 'k', 'bina', 1),
+    B('firin', 'Fırın', '🍞', -48, gz(10), 11, 10, 5.5, '#c98b52', 'k', 'bina', 1),
+    B('doktor', 'Doktor', '💊', -35, gz(10), 11, 10, 6, '#e0d6c2', 'k', 'bina', 1),
     B('terzi', 'Terzi', '👔', -21, gz(10), 11, 10, 5.5, '#a35d7a', 'k'),
     B('madenci', 'Madenci Dükkânı', '⛏️', 17, gz(10), 12, 10, 5.5, '#7a6a4f', 'k'),
     B('demirci', 'Demirci', '🔨', 32, gz(11), 13, 11, 5, '#4b4642', 'k'),
@@ -46,12 +49,13 @@ const Kasaba = (() => {
     B('ev9', 'Ev', '🏠', 12, 60, 10, 9, 5, '#8a9a8a', 'k', 'ev'),
     B('ev10', 'Ev', '🏠', 70, 58, 10, 9, 5, '#b0a080', 'k', 'ev'),
   ];
+  const icBinalar = binalar.filter(b => b.ic);
   // Katı olmayan alanlar (çit, mezarlık): haritada çizilir, içinden yürünür
   const alanlar = [
     { id: 'agil', ad: 'Ağıl', emoji: '🐄', x: -16, z: 62, g: 16, d: 13 },
     { id: 'mezarlik', ad: 'Mezarlık', emoji: '✝️', x: 42, z: 62, g: 16, d: 12 },
   ];
-  // Küçük engeller (kuyu, fıçılar, at arabaları): yuvarlak, r yarıçap
+  // Küçük engeller (kuyu, fıçılar, at arabaları): yuvarlak, r yarıçap (sadece zemin katta)
   const engeller = [
     { tur: 'kuyu', x: 0, z: 0, r: 1.4 },
     { tur: 'araba', x: -8, z: -40, r: 2.2 }, { tur: 'araba', x: 60, z: 38, r: 2.2 },
@@ -65,28 +69,43 @@ const Kasaba = (() => {
   const RAY_Z = -78;     // demiryolu (görsel)
 
   const binaBul = id => binalar.find(b => b.id === id) || alanlar.find(a => a.id === id);
+
+  // ---------- Bina içi koordinat (u: yana, w: ön +, arka -) ----------
+  const isaret = b => (b.kapi === 'k' ? -1 : 1);
+  const yerel = (b, x, z) => ({ u: (x - b.x) * isaret(b), w: (z - b.z) * isaret(b) });
+  const dunya = (b, u, w) => ({ x: b.x + u * isaret(b), z: b.z + w * isaret(b) });
+  const yonDunya = (b, a) => a + (b.kapi === 'k' ? Math.PI : 0);      // yerel yön (0 = ön) → dünya
+  // İki katlı binalarda merdiven: sol duvar boyunca, alt ucu öne, üst ucu arkaya bakar
+  const merdiven = b => ({ u1: -b.g / 2 + DUVAR / 2, u2: -b.g / 2 + 1.9, wAlt: b.d / 2 - 2.4, wUst: -b.d / 2 + 1.4 });
+  const duvarY = b => (b.ic === 2 ? Math.max(b.y * 0.78, 6.9) : b.y * 0.78);
+
   // Bina kapısının önündeki nokta (ox: kapıya göre yana kayma)
   function kapiOnu(id, ox = 0) {
     const b = binaBul(id);
-    if (b.kapi === 'g') return { x: b.x + ox, z: b.z + b.d / 2 + 1.6, yon: Math.PI };       // kapıya bakmak için -z'ye dön
-    return { x: b.x + ox, z: b.z - b.d / 2 - 1.6, yon: 0 };
+    if (b.kapi === 'g') return { x: b.x + ox, z: b.z + b.d / 2 + 1.6, yon: Math.PI, y: 0, kat: 0 };       // kapıya bakmak için -z'ye dön
+    return { x: b.x + ox, z: b.z - b.d / 2 - 1.6, yon: 0, y: 0, kat: 0 };
+  }
+  // Bina içinde bir nokta (kat 0 zemin, 1 üst kat); a: yerel bakış yönü (0 ön, π arka)
+  function icNokta(id, u, w, kat = 0, a = Math.PI) {
+    const b = binaBul(id), p = dunya(b, u, w);
+    return { x: p.x, z: p.z, yon: yonDunya(b, a), y: kat ? KAT_Y : 0, kat, bina: id };
   }
 
   // Görevler: haydutlar yapar. olay = şeriflere giden bildirim yazısı
-  const G = (id, ad, olay, emoji, sure, yer) => ({ id, ad, olay, emoji, sure, ...yer });
+  const G = (id, ad, olay, emoji, sure, yer) => ({ id, ad, olay, emoji, sure, y: 0, kat: 0, ...yer });
   const gorevler = [
-    G('banka', 'Banka kasasını soy', 'Banka kasası soyuldu', '🏦', 6, kapiOnu('banka')),
+    G('banka', 'Banka kasasını soy', 'Banka kasası soyuldu', '🏦', 6, icNokta('banka', 4, -5)),
     G('anahtar', 'Hapishane anahtarını çal', 'Hapishane anahtarı çalındı', '🔑', 5, kapiOnu('serif', -3)),
     G('afis', 'Aranıyor afişlerini yırt', 'Aranıyor afişleri yırtıldı', '📜', 3, kapiOnu('serif', 4.5)),
-    G('kasa', 'Salonun kasasından para al', 'Salonun kasası boşaltıldı', '💰', 4, kapiOnu('salon', -5)),
-    G('kumar', 'Kumar masasında hile yap', 'Kumar masasında hile yapıldı', '🃏', 4, kapiOnu('salon', 5)),
-    G('otel', 'Otel odalarını ara', 'Otel odaları arandı', '🛏️', 5, kapiOnu('otel')),
-    G('posta', 'Posta çantasını çal', 'Posta çantası çalındı', '✉️', 4, kapiOnu('postane', -3)),
+    G('kasa', 'Salonun kasasından para al', 'Salonun kasası boşaltıldı', '💰', 4, icNokta('salon', 4, -1.6)),
+    G('kumar', 'Üst katta kumar masasında hile yap', 'Salonun üst katında kumar masasında hile yapıldı', '🃏', 4, icNokta('salon', 3, -2, 1, Math.PI / 2)),
+    G('otel', 'Üst kattaki otel odalarını ara', 'Otelin üst katındaki odalar arandı', '🛏️', 5, icNokta('otel', 5, -4.1, 1)),
+    G('posta', 'Posta çantasını çal', 'Postaneden posta çantası çalındı', '✉️', 4, icNokta('postane', 3, -3.5)),
     G('telgraf', 'Telgraf telini kes', 'Telgraf teli kesildi', '⚡', 3, kapiOnu('postane', 5)),
-    G('tapu', 'Belediyeden tapuyu çal', 'Belediyeden tapu çalındı', '📃', 5, kapiOnu('belediye')),
-    G('tabanca', 'Silahçıdan tabanca çal', 'Silahçıdan tabanca çalındı', '🔫', 4, kapiOnu('silahci')),
-    G('ekmek', 'Fırından ekmek çal', 'Fırından ekmek çalındı', '🍞', 3, kapiOnu('firin')),
-    G('ilac', 'Doktordan ilaç çal', 'Doktordan ilaç çalındı', '💊', 4, kapiOnu('doktor')),
+    G('tapu', 'Belediyenin üst katından tapuyu çal', 'Belediyenin üst katından tapu çalındı', '📃', 5, icNokta('belediye', 3, -4.5, 1)),
+    G('tabanca', 'Silahçıdan tabanca çal', 'Silahçıdan tabanca çalındı', '🔫', 4, icNokta('silahci', 3, -3.2)),
+    G('ekmek', 'Fırından ekmek çal', 'Fırından ekmek çalındı', '🍞', 3, icNokta('firin', 2.5, -3.2)),
+    G('ilac', 'Doktordan ilaç çal', 'Doktordan ilaç çalındı', '💊', 4, icNokta('doktor', 2.5, -3.2)),
     G('altin', 'Altın tozu çal', 'Madenciden altın tozu çalındı', '✨', 5, kapiOnu('madenci')),
     G('kilit', 'Demircide kilit kır', 'Demircide kilit kırıldı', '🔨', 4, kapiOnu('demirci')),
     G('bagis', 'Bağış kutusunu boşalt', 'Kilisenin bağış kutusu boşaltıldı', '⛪', 4, kapiOnu('kilise')),
@@ -99,35 +118,61 @@ const Kasaba = (() => {
   // Kılık değiştirme noktaları
   const kiliklar = [
     { id: 'terzi', ad: 'Terzi', ...kapiOnu('terzi') },
-    { id: 'camasir', ad: 'Çamaşır ipi', x: 30, z: 52, yon: 0 },
-    { id: 'otelarka', ad: 'Otel deposu', x: 32, z: -29, yon: Math.PI },
+    { id: 'camasir', ad: 'Çamaşır ipi', x: 30, z: 52, yon: 0, y: 0, kat: 0 },
+    { id: 'otelarka', ad: 'Otel deposu', x: 32, z: -29, yon: Math.PI, y: 0, kat: 0 },
   ];
 
-  // ---------- Çarpışma ----------
-  const kutular = binalar.map(b => ({ x1: b.x - b.g / 2, x2: b.x + b.g / 2, z1: b.z - b.d / 2, z2: b.z + b.d / 2 }));
+  // ---------- Çarpışma kutuları (kat: 0 zemin, 1 üst kat, 2 ikisi de) ----------
+  function kutuYerel(b, u1, u2, w1, w2, kat = 2) {
+    const a = dunya(b, u1, w1), c = dunya(b, u2, w2);
+    return { x1: Math.min(a.x, c.x), x2: Math.max(a.x, c.x), z1: Math.min(a.z, c.z), z2: Math.max(a.z, c.z), kat };
+  }
+  // Girilebilir binanın duvarları: ön ve arka kapı boşluklu
+  function icDuvarlar(b) {
+    const g2 = b.g / 2, d2 = b.d / 2, K = DUVAR, kg = KAPI / 2, L = [];
+    for (const w of [d2, -d2]) {
+      L.push(kutuYerel(b, -g2, -kg, w - K / 2, w + K / 2), kutuYerel(b, kg, g2, w - K / 2, w + K / 2));
+      if (b.ic === 2) L.push(kutuYerel(b, -kg, kg, w - K / 2, w + K / 2, 1));      // üst katta kapı yok
+    }
+    L.push(kutuYerel(b, -g2 - K / 2, -g2 + K / 2, -d2, d2), kutuYerel(b, g2 - K / 2, g2 + K / 2, -d2, d2));
+    if (b.ic === 2) {
+      const m = merdiven(b);
+      L.push(kutuYerel(b, m.u2 - 0.1, m.u2 + 0.1, m.wUst, m.wAlt, 0));     // merdivenin yanı (zeminden yandan çıkılmasın)
+      L.push(kutuYerel(b, m.u1, m.u2, m.wUst - 0.1, m.wUst + 0.1, 0));    // merdivenin altı
+      L.push(kutuYerel(b, m.u2 - 0.1, m.u2 + 0.1, m.wUst, d2, 1));        // üst kat korkuluğu (boşluğa düşülmesin)
+    }
+    return L;
+  }
+  const kutular = [];
+  binalar.forEach(b => {
+    if (b.ic) kutular.push(...icDuvarlar(b));
+    else kutular.push({ x1: b.x - b.g / 2, x2: b.x + b.g / 2, z1: b.z - b.d / 2, z2: b.z + b.d / 2, kat: 2 });
+  });
 
   // Şerif bekleme odası: oyun başında şerifler burada kilitli bekler, sonra doğudaki kapı açılır
   const serifOdasi = { x: -61, z: -31, g: 10, d: 7, y: 3.2, kapiG: 2.4 };
   {
     const o = serifOdasi, K = 0.5, x1 = o.x - o.g / 2, x2 = o.x + o.g / 2, z1 = o.z - o.d / 2, z2 = o.z + o.d / 2, kg = o.kapiG / 2;
     kutular.push(
-      { x1, x2, z1: z1 - K / 2, z2: z1 + K / 2 }, { x1, x2, z1: z2 - K / 2, z2: z2 + K / 2 },          // kuzey, güney
-      { x1: x1 - K / 2, x2: x1 + K / 2, z1, z2 },                                                        // batı
-      { x1: x2 - K / 2, x2: x2 + K / 2, z1, z2: o.z - kg }, { x1: x2 - K / 2, x2: x2 + K / 2, z1: o.z + kg, z2 },   // doğu (kapı boşluğu)
-      { x1: x2 - K / 2, x2: x2 + K / 2, z1: o.z - kg, z2: o.z + kg, kapi: true },                        // kapı
+      { x1, x2, z1: z1 - K / 2, z2: z1 + K / 2, kat: 2 }, { x1, x2, z1: z2 - K / 2, z2: z2 + K / 2, kat: 2 },          // kuzey, güney
+      { x1: x1 - K / 2, x2: x1 + K / 2, z1, z2, kat: 2 },                                                                // batı
+      { x1: x2 - K / 2, x2: x2 + K / 2, z1, z2: o.z - kg, kat: 2 }, { x1: x2 - K / 2, x2: x2 + K / 2, z1: o.z + kg, z2, kat: 2 },   // doğu (kapı boşluğu)
+      { x1: x2 - K / 2, x2: x2 + K / 2, z1: o.z - kg, z2: o.z + kg, kat: 2, kapi: true },                                // kapı
     );
   }
   let kapiKapali = false;
-  const sayilir = k => !k.kapi || kapiKapali;
-  function icerde(x, z, pay = 0) {
-    for (const k of kutular) if (sayilir(k) && x > k.x1 - pay && x < k.x2 + pay && z > k.z1 - pay && z < k.z2 + pay) return true;
-    for (const e of engeller) if ((x - e.x) ** 2 + (z - e.z) ** 2 < (e.r + pay) ** 2) return true;
+  const sayilir = (k, kat) => (!k.kapi || kapiKapali) && (k.kat === 2 || k.kat === kat);
+  const katOf = y => (y > 1.6 ? 1 : 0);
+
+  function icerde(x, z, pay = 0, kat = 0) {
+    for (const k of kutular) if (sayilir(k, kat) && x > k.x1 - pay && x < k.x2 + pay && z > k.z1 - pay && z < k.z2 + pay) return true;
+    if (kat === 0) for (const e of engeller) if ((x - e.x) ** 2 + (z - e.z) ** 2 < (e.r + pay) ** 2) return true;
     return false;
   }
   // Yuvarlak bir karakteri engellerin dışına it
-  function it(x, z, r = 0.35) {
+  function it(x, z, r = 0.35, kat = 0) {
     for (const k of kutular) {
-      if (!sayilir(k)) continue;
+      if (!sayilir(k, kat)) continue;
       const yx = Math.max(k.x1, Math.min(x, k.x2)), yz = Math.max(k.z1, Math.min(z, k.z2));
       const dx = x - yx, dz = z - yz, d2 = dx * dx + dz * dz;
       if (d2 < r * r) {
@@ -138,42 +183,75 @@ const Kasaba = (() => {
         }
       }
     }
-    for (const e of engeller) {
+    if (kat === 0) for (const e of engeller) {
       const dx = x - e.x, dz = z - e.z, d = Math.hypot(dx, dz), m = e.r + r;
       if (d < m) { if (d < 1e-4) { x += m; } else { x = e.x + dx / d * m; z = e.z + dz / d * m; } }
     }
     x = Math.max(-SINIR, Math.min(SINIR, x)); z = Math.max(-SINIR, Math.min(SINIR, z));
     return { x, z };
   }
-  function yolAcik(x1, z1, x2, z2, pay = 0.5) {
-    const d = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(d / 0.6));
-    for (let i = 0; i <= n; i++) { const t = i / n; if (icerde(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, pay)) return false; }
+  function yolAcik(x1, z1, x2, z2, pay = 0.5, kat = 0) {
+    const d = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.ceil(d / 0.4));
+    for (let i = 0; i <= n; i++) { const t = i / n; if (icerde(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, pay, kat)) return false; }
     return true;
   }
-  // Işın: binalara çarpmadan önce gidebildiği mesafe (kamera ve atış için)
-  function isin(x, z, dx, dz, enFazla) {
-    for (let t = 0.3; t < enFazla; t += 0.3) { if (icerdeBina(x + dx * t, z + dz * t)) return t; }
+  // Işın: duvarlara çarpmadan önce gidebildiği mesafe (kamera ve atış için)
+  function isin(x, z, dx, dz, enFazla, kat = 0) {
+    for (let t = 0.2; t < enFazla; t += 0.2) { if (icerdeBina(x + dx * t, z + dz * t, kat)) return t; }
     return enFazla;
   }
-  function icerdeBina(x, z) { for (const k of kutular) if (sayilir(k) && x > k.x1 && x < k.x2 && z > k.z1 && z < k.z2) return true; return false; }
+  function icerdeBina(x, z, kat = 0) { for (const k of kutular) if (sayilir(k, kat) && x > k.x1 && x < k.x2 && z > k.z1 && z < k.z2) return true; return false; }
 
-  // ---------- Yürüme ağı (botlar için) ----------
+  // ---------- Katlar ----------
+  // Bu noktanın içinde olduğu girilebilir bina (yoksa null)
+  function icBina(x, z) {
+    for (const b of icBinalar) { const p = yerel(b, x, z); if (Math.abs(p.u) < b.g / 2 && Math.abs(p.w) < b.d / 2) return b; }
+    return null;
+  }
+  // Ayağının bastığı yükseklik (merdivende eğimli, üst katta KAT_Y). yOnce: bir önceki yükseklik
+  function zeminY(x, z, yOnce = 0) {
+    const b = icBina(x, z);
+    if (!b || b.ic !== 2) return 0;
+    const p = yerel(b, x, z), m = merdiven(b);
+    if (p.u < m.u2) {
+      if (p.w > m.wUst && p.w < m.wAlt) return KAT_Y * Math.max(0, Math.min(1, (m.wAlt - p.w) / (m.wAlt - m.wUst)));
+      if (p.w >= m.wAlt) return 0;                       // merdiven başı (boşluğun altı)
+    }
+    return yOnce > 1.6 ? KAT_Y : 0;
+  }
+  // Kameranın çıkabileceği en yüksek yer (tavan), açıktaysa çok yüksek
+  function tavan(x, z, y = 0) {
+    const b = icBina(x, z);
+    if (!b) return 99;
+    if (b.ic === 2 && y < 1.6) {
+      const p = yerel(b, x, z), m = merdiven(b);
+      if (!(p.u < m.u2 && p.w > m.wUst)) return KAT_Y - 0.25;
+    }
+    return duvarY(b) - 0.35;
+  }
+
+  // ---------- Yürüme ağı (botlar için, zemin kat) ----------
   const ADIM = 6;
   const dugumler = [];
   for (let x = -84; x <= 84; x += ADIM) for (let z = -84; z <= 84; z += ADIM) if (!icerde(x, z, 1.2)) dugumler.push({ x, z, k: [] });
+  // Girilebilir binalara kapı düğümleri: dış ön → iç ön → orta → iç arka → dış arka
+  icBinalar.forEach(b => {
+    const d2 = b.d / 2;
+    [[0, d2 + 1.8], [0.4, d2 - 1.4], [1.2, 0], [0.4, -d2 + 1.4], [0, -d2 - 1.8]].forEach(([u, w]) => { const p = dunya(b, u, w); dugumler.push({ x: p.x, z: p.z, k: [] }); });
+  });
   dugumler.forEach((a, i) => dugumler.forEach((b, j) => {
     if (j <= i) return;
     const d = Math.hypot(a.x - b.x, a.z - b.z);
-    if (d < ADIM * 1.5 && yolAcik(a.x, a.z, b.x, b.z, 0.6)) { a.k.push(j); b.k.push(i); }
+    if (d < ADIM * 1.5 && yolAcik(a.x, a.z, b.x, b.z, 0.5)) { a.k.push(j); b.k.push(i); }
   }));
   function enYakinDugum(x, z) {
     let en = -1, ed = 1e9;
-    dugumler.forEach((d, i) => { const m = (d.x - x) ** 2 + (d.z - z) ** 2; if (m < ed && d.k.length && yolAcik(x, z, d.x, d.z, 0.3)) { ed = m; en = i; } });
+    dugumler.forEach((d, i) => { const m = (d.x - x) ** 2 + (d.z - z) ** 2; if (m < ed && m < 400 && d.k.length && yolAcik(x, z, d.x, d.z, 0.3)) { ed = m; en = i; } });
     if (en < 0) dugumler.forEach((d, i) => { const m = (d.x - x) ** 2 + (d.z - z) ** 2; if (m < ed && d.k.length) { ed = m; en = i; } });
     return en;
   }
-  // Noktadan noktaya yol (noktalar listesi). Kısaltma: arada engel yoksa ara düğümleri atla.
-  function yol(x1, z1, x2, z2) {
+  // Zemin katta noktadan noktaya yol. Kısaltma: arada engel yoksa ara düğümleri atla.
+  function zeminYol(x1, z1, x2, z2) {
     const a = enYakinDugum(x1, z1), b = enYakinDugum(x2, z2);
     if (a < 0 || b < 0) return [{ x: x2, z: z2 }];
     const onceki = new Map([[a, -1]]), kuyruk = [a];
@@ -184,24 +262,56 @@ const Kasaba = (() => {
     const kisa = []; let cx = x1, cz = z1, i = 0;
     while (i < liste.length) {
       let j = liste.length - 1;
-      while (j > i && !yolAcik(cx, cz, liste[j].x, liste[j].z, 0.45)) j--;
+      while (j > i && !yolAcik(cx, cz, liste[j].x, liste[j].z, 0.4)) j--;
       kisa.push(liste[j]); cx = liste[j].x; cz = liste[j].z; i = j + 1;
     }
     return kisa;
   }
+  // Merdivenin alt ve üst ucu (dünya)
+  function merdivenUclari(b) {
+    const m = merdiven(b), u = (m.u1 + m.u2) / 2;
+    // tam: bu noktaya köşe kesmeden tam varılmalı (yoksa korkuluğa takılır)
+    return { alt: { ...dunya(b, u, m.wAlt + 0.9), tam: true }, ust: { ...dunya(b, u, m.wUst - 0.9), tam: true } };
+  }
+  // Katlar arası yol: üst kattaysa önce merdivenden in, hedef üst kattaysa sonunda merdivenden çık
+  function yol(x1, z1, x2, z2, y1 = 0, hedefKat = 0, hedefBina = null) {
+    const parcalar = [];
+    let sx = x1, sz = z1;
+    const b1 = katOf(y1) === 1 ? icBina(x1, z1) : null;
+    if (b1 && b1.ic === 2) {
+      const u = merdivenUclari(b1);
+      if (hedefKat === 1 && hedefBina === b1.id) return [{ x: x2, z: z2 }];
+      parcalar.push(u.ust, u.alt); sx = u.alt.x; sz = u.alt.z;
+    }
+    if (hedefKat === 1 && hedefBina) {
+      const u = merdivenUclari(binaBul(hedefBina));
+      parcalar.push(...zeminYol(sx, sz, u.alt.x, u.alt.z).slice(0, -1), u.alt, u.ust, { x: x2, z: z2 });
+    } else parcalar.push(...zeminYol(sx, sz, x2, z2));
+    return parcalar;
+  }
 
-  // Botların uğrayacağı ilginç yerler: görevler, kılık yerleri, kapılar, caddede rastgele noktalar
+  // Botların uğrayacağı ilginç yerler: görevler, kılık yerleri, kapılar, bina içleri, caddede rastgele noktalar
   const ugraklar = [
-    ...gorevler.map(g => ({ x: g.x, z: g.z, yon: g.yon, bekle: [3, 8] })),
-    ...kiliklar.map(k => ({ x: k.x, z: k.z, yon: k.yon, bekle: [3, 7] })),
+    ...gorevler.map(g => ({ x: g.x, z: g.z, yon: g.yon, kat: g.kat, bina: g.bina || null, gorev: true, bekle: [4, 10] })),   // botlar da görev yapıyormuş gibi bekler
+    ...kiliklar.map(k => ({ x: k.x, z: k.z, yon: k.yon, kat: 0, bekle: [3, 7] })),
     ...binalar.filter(b => b.tur === 'ev').map(b => ({ ...kapiOnu(b.id), bekle: [2, 6] })),
   ];
-  for (let x = -80; x <= 80; x += 8) { ugraklar.push({ x, z: -5.5, bekle: [1, 5] }); ugraklar.push({ x, z: 5.5, bekle: [1, 5] }); }
-  for (let z = -70; z <= 70; z += 10) if (Math.abs(z) > 10) ugraklar.push({ x: (z % 20 ? 3 : -3), z, bekle: [1, 4] });
+  // Bina içlerinde gezinme noktaları (zeminde ve üst katta)
+  icBinalar.forEach(b => {
+    ugraklar.push({ ...icNokta(b.id, 2, 1, 0, 0), bekle: [2, 6] }, { ...icNokta(b.id, -1, -2, 0, Math.PI / 2), bekle: [2, 5] });
+    if (b.ic === 2) ugraklar.push({ ...icNokta(b.id, 3, 2, 1, 0), bekle: [3, 7] }, { ...icNokta(b.id, -1, -3.5, 1, Math.PI), bekle: [3, 7] });
+  });
+  ugraklar.forEach(u => { u.kat = u.kat || 0; u.bina = u.bina || null; });
+  for (let x = -80; x <= 80; x += 8) { ugraklar.push({ x, z: -5.5, kat: 0, bina: null, bekle: [1, 5] }); ugraklar.push({ x, z: 5.5, kat: 0, bina: null, bekle: [1, 5] }); }
+  for (let z = -70; z <= 70; z += 10) if (Math.abs(z) > 10) ugraklar.push({ x: (z % 20 ? 3 : -3), z, kat: 0, bina: null, bekle: [1, 4] });
 
   // Odanın içinde rastgele bir yer (şeriflerin başlangıcı)
   function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
 
-  return { serifOdasi, odadaYer, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; }, SINIR, CADDE, ARA, RAY_Z, binalar, alanlar, engeller, gorevler, kiliklar, ugraklar, it, icerde, yolAcik, isin, yol, binaBul, dugumSayisi: dugumler.length };
+  return {
+    serifOdasi, odadaYer, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
+    SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
+    it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
+  };
 })();
 if (typeof module !== 'undefined') module.exports = Kasaba;

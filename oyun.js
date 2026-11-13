@@ -55,22 +55,41 @@
   });
   Ag.kabulKurali(n => n >= 10 ? 'Oda dolu (en fazla 10 kişi).' : (Motor.aktif ? 'Oyun sürüyor. Bitince tekrar dene.' : true));
   Ag.on('oyuncular', liste => {
-    $('lobiListe').innerHTML = liste.map((o, i) => `<li><span>${i === 0 ? '👑 ' : '🤠 '}${kacis(o.ad)}${o.id === Ag.benimId ? ' (sen)' : ''}</span><span>${o.ses ? '🎤' : ''}</span></li>`).join('');
+    const secimli = lobiAyar.rolMod !== 'rastgele';
+    const rolYazi = o => !secimli ? '' : o.rol === 'haydut' ? '🦹 Haydut' : o.rol === 'serif' ? '⭐ Şerif' : '❔ seçmedi';
+    $('lobiListe').innerHTML = liste.map((o, i) => `<li><span>${i === 0 ? '👑 ' : '🤠 '}${kacis(o.ad)}${o.id === Ag.benimId ? ' (sen)' : ''}</span><span>${rolYazi(o)} ${o.ses ? '🎤' : ''}</span></li>`).join('');
+    rolDugmeleri();
     if (Ag.evMi) {
       const n = liste.length, sel = $('ayHaydut'), eski = +sel.value || Math.max(1, Math.round(n / 3));
       sel.innerHTML = Array.from({ length: Math.max(1, n - 1) }, (_, i) => `<option>${i + 1}</option>`).join('');
       sel.value = String(Math.min(Math.max(1, n - 1), eski));
       $('baslaBtn').disabled = n < 2;
-      ayarYay();
+      ayarYay(true);
     }
   });
-  Ag.on('katildi', () => ayarYay());
-  ['ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayKasabali', 'ayKilik'].forEach(id => $(id).addEventListener('change', ayarYay));
-  function ayarOku() {
-    return { haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value };
+  // Rol seçimi (bekleme odasında herkes kendi seçer)
+  let lobiAyar = { rolMod: 'secim' };
+  function rolDugmeleri() {
+    const secimli = lobiAyar.rolMod !== 'rastgele', ben = Ag.oyuncular.find(o => o.id === Ag.benimId);
+    $('rolSecim').classList.toggle('gizli', !secimli);
+    $('rolHaydutBtn').classList.toggle('secili', ben?.rol === 'haydut');
+    $('rolSerifBtn').classList.toggle('secili', ben?.rol === 'serif');
+    $('haydutSayiSatir').classList.toggle('gizli', secimli);
   }
-  const ayarYazi = a => `🦹 ${a.haydut} haydut · 🤠 ${Math.max(1, Ag.oyuncular.length - a.haydut)} şerif · 🔫 ${a.hak} hak · ⏱️ ${a.sure} dk · 🎯 ${a.hedef} görev · 👥 ${a.kasabali} kasabalı · 👔 ${a.kilik} kılık`;
-  function ayarYay() { if (!Ag.evMi) return; const a = ayarOku(); $('ayarOzet').textContent = ayarYazi(a); Ag.yayinla({ tip: 'ayar', ayar: a }); }
+  $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
+  $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
+  Ag.on('katildi', () => ayarYay());
+  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayKasabali', 'ayKilik'].forEach(id => $(id).addEventListener('change', ayarYay));
+  function ayarOku() {
+    return { rolMod: $('ayRolMod').value, haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value };
+  }
+  const ayarYazi = a => `${a.rolMod === 'rastgele' ? `🎲 Rastgele: 🦹 ${a.haydut} haydut · ⭐ ${Math.max(1, Ag.oyuncular.length - a.haydut)} şerif` : '🎭 Roller: herkes kendi seçer'} · 🔫 ${a.hak} hak · ⏱️ ${a.sure} dk · 🎯 ${a.hedef} görev · 👥 ${a.kasabali} kasabalı · 👔 ${a.kilik} kılık`;
+  function ayarYay(listedenGeldi) {
+    if (!Ag.evMi) return;
+    const a = ayarOku(), degisti = a.rolMod !== lobiAyar.rolMod; lobiAyar = a;
+    $('ayarOzet').textContent = ayarYazi(a); Ag.yayinla({ tip: 'ayar', ayar: a });
+    if (degisti && !listedenGeldi) Ag.lobiYay(); else rolDugmeleri();
+  }
 
   $('kodKopyalaBtn').onclick = () => {
     const url = `${location.origin}${location.pathname}?oda=${Ag.kod}`;
@@ -91,11 +110,17 @@
   $('baslaBtn').onclick = () => {
     if (!Ag.evMi || Ag.oyuncular.length < 2) return;
     sonAyar = ayarOku();
+    if (sonAyar.rolMod !== 'rastgele') {
+      const secmeyen = Ag.oyuncular.filter(o => !o.rol).map(o => o.ad);
+      if (secmeyen.length) { $('lobiDurum').textContent = `Herkes rolünü seçsin: ${secmeyen.join(', ')} seçmedi.`; return; }
+      if (!Ag.oyuncular.some(o => o.rol === 'haydut')) { $('lobiDurum').textContent = 'En az 1 kişi haydut olmalı.'; return; }
+      if (!Ag.oyuncular.some(o => o.rol === 'serif')) { $('lobiDurum').textContent = 'En az 1 kişi şerif olmalı.'; return; }
+    }
     motoruBaslat();
   };
   function motoruBaslat() {
     clearInterval(motorSayac);
-    Motor.baslat(Ag.oyuncular.map(o => ({ id: o.id, ad: o.ad })), sonAyar, {
+    Motor.baslat(Ag.oyuncular.map(o => ({ id: o.id, ad: o.ad, rol: o.rol })), sonAyar, {
       kisiye: (id, m) => (id === Ag.benimId ? mesaj(m) : Ag.gonderId(id, m)),
       herkese: m => Ag.yayinla(m),
     });
@@ -104,6 +129,12 @@
   }
   Ag.on('evMesaj', (m, id) => {
     if (m.tip === 'lobiyeDon') return;
+    if (m.tip === 'rolSec') {   // bekleme odasında rol seçimi
+      if (Motor.aktif) return;
+      const o = Ag.oyuncular.find(x => x.id === id);
+      if (o) { o.rol = m.rol === 'serif' ? 'serif' : 'haydut'; Ag.lobiYay(); }
+      return;
+    }
     Motor.girdi(id, m);
   });
   Ag.on('koptu', o => Motor.koptu(o.id));
@@ -117,7 +148,7 @@
   Ag.on('mesaj', mesaj);
   function mesaj(m) {
     switch (m.tip) {
-      case 'ayar': if (!Ag.evMi) $('ayarOzet').textContent = ayarYazi(m.ayar); break;
+      case 'ayar': if (!Ag.evMi) { $('ayarOzet').textContent = ayarYazi(m.ayar); lobiAyar = m.ayar; rolDugmeleri(); } break;
       case 'basla': oyunBaslat(m); break;
       case 'd': if (oyun) konumlar(m); break;
       case 'is': if (oyun) isDurumu(m); break;
@@ -146,7 +177,7 @@
     oyun = {
       benimNo: m.benimNo, rol: m.rol, takim: new Set(m.takim), serifler: new Set(m.serifler), ayar: m.ayar,
       takimAdlar: m.takimAdlar, serifAdlar: m.serifAdlar,
-      x: m.x, z: m.z, yaw: m.rol === 'serif' ? Math.PI / 2 : Math.random() * 6.28, pitch: -0.05, govdeYaw: m.rol === 'serif' ? Math.PI / 2 : 0, tip: m.tipNo,
+      x: m.x, z: m.z, y: 0, yaw: m.rol === 'serif' ? Math.PI / 2 : Math.random() * 6.28, pitch: -0.05, govdeYaw: m.rol === 'serif' ? Math.PI / 2 : 0, tip: m.tipNo,
       kapiAcilis: performance.now() + (m.bekleme || 0) * 1000, kapiAcik: !m.bekleme,
       canli: true, kamera: 'arka', kos: false, is: null, telsiz: false,
       hak: m.ayar.hak, kilik: m.ayar.kilik, muhbir: 1, muhbirAktif: false,
@@ -156,6 +187,7 @@
     $('elendiYazi').classList.add('gizli');
     $('ilerleme').classList.add('gizli');
     $('harita').classList.remove('buyuk');
+    $('gorevListe').classList.add('gizli');   // görev listesi başta kapalı (L / 📋 ile açılır)
     Kasaba.odaKapisi(!oyun.kapiAcik); Sahne.serifKapisi(oyun.kapiAcik, true);
     isaretleriKur();
     ekran('hud');
@@ -196,6 +228,7 @@
   function oyunuTemizle() {
     varliklar.forEach(v => Sahne.scene?.remove(v.g)); varliklar.clear();
     isaretler.forEach(s => Sahne.scene?.remove(s)); isaretler.length = 0;
+    lazerler.forEach(l => Sahne.scene?.remove(l.cizgi, l.nokta)); lazerler.clear();
     $('serifPanel').innerHTML = ''; $('bekleYazi').classList.add('gizli');
     oyun = null;
     if (Ag.seviyeleriSifirla) Ag.seviyeleriSifirla();
@@ -214,7 +247,7 @@
   }
   function isaretleriKur() {
     if (oyun.rol !== 'haydut') return;
-    Kasaba.gorevler.forEach(g => { const s = emojiSprite(g.emoji, '#e8a81acc'); s.position.set(g.x, 2.9, g.z); s.userData.gid = g.id; Sahne.scene.add(s); isaretler.push(s); });
+    Kasaba.gorevler.forEach(g => { const s = emojiSprite(g.emoji, '#e8a81acc'); s.position.set(g.x, g.y + 2.9, g.z); s.userData.gid = g.id; s.userData.taban = g.y; Sahne.scene.add(s); isaretler.push(s); });
     Kasaba.kiliklar.forEach(k => { const s = emojiSprite('👔', '#8a5ad0cc'); s.position.set(k.x, 2.9, k.z); s.userData.kilik = true; Sahne.scene.add(s); isaretler.push(s); });
   }
 
@@ -222,8 +255,8 @@
   function konumlar(m) {
     oyun.kalan = m.k;
     const gorulen = new Set();
-    for (let i = 0; i < m.v.length; i += 7) {
-      const no = m.v[i], x = m.v[i + 1] / 10, z = m.v[i + 2] / 10, yaw = m.v[i + 3] / 100, h = m.v[i + 4], tip = m.v[i + 5], durum = m.v[i + 6];
+    for (let i = 0; i < m.v.length; i += 9) {
+      const no = m.v[i], x = m.v[i + 1] / 10, z = m.v[i + 2] / 10, yaw = m.v[i + 3] / 100, h = m.v[i + 4], tip = m.v[i + 5], durum = m.v[i + 6], y = m.v[i + 7] / 10, nisan = m.v[i + 8] ? m.v[i + 8] / 100 - 3 : null;
       gorulen.add(no);
       let v = varliklar.get(no);
       if (!v || v.tip !== tip) {
@@ -234,10 +267,10 @@
           else if (oyun.rol === 'haydut' && oyun.takim.has(no)) Karakter.cizgiEkle(g, TAKIM_RENK);
         }
         Sahne.scene.add(g);
-        v = { g, tip, x: v?.x ?? x, z: v?.z ?? z, yaw: v?.yaw ?? yaw, tx: x, tz: z, tyaw: yaw, h, durum };
+        v = { g, tip, x: v?.x ?? x, z: v?.z ?? z, y: v?.y ?? y, yaw: v?.yaw ?? yaw, tx: x, tz: z, ty: y, tyaw: yaw, h, durum };
         varliklar.set(no, v);
       }
-      v.tx = x; v.tz = z; v.tyaw = yaw; v.h = h;
+      v.tx = x; v.tz = z; v.ty = y; v.tyaw = yaw; v.h = h; v.nisan = nisan;
       if (durum === 1 && v.durum !== 1) { v.g.userData.olum = 0.01; Karakter.cizgiKaldir(v.g); }
       v.durum = durum;
       if (no === oyun.benimNo) oyun.tip = tip;
@@ -256,6 +289,8 @@
     if (e.code === 'KeyM') $('harita').classList.toggle('buyuk');
     if (e.code === 'KeyF' && oyun.rol === 'serif') ates();
     if (e.code === 'KeyK') mikDegistir();
+    if (e.code === 'KeyQ') nisanDegistir();
+    if (e.code === 'KeyL') $('gorevListe').classList.toggle('gizli');
     // Alt: fareyi serbest bırak (mikrofon vb. tuşlara tıklamak için). ESC de aynı işi yapar.
     if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); if (document.pointerLockElement) document.exitPointerLock(); }
   });
@@ -270,12 +305,28 @@
   addEventListener('keyup', e => tuslar.delete(e.code));
   addEventListener('blur', () => tuslar.clear());
   const kanvas = $('sahne');
-  kanvas.addEventListener('click', () => { if (oyun && !dokun && !document.pointerLockElement) kanvas.requestPointerLock?.(); });
+  kanvas.addEventListener('click', () => {
+    if (!oyun || dokun || document.pointerLockElement) return;
+    try { const p = kanvas.requestPointerLock?.(); if (p?.catch) p.catch(() => {}); } catch (e) { /* fare kilitlenemiyor: sürükleyerek bakılır */ }
+  });
+  // Fare kilitlenemezse (ör. uygulama içi tarayıcı): sol tuş basılı sürükleyerek etrafa bak
+  kanvas.addEventListener('mousemove', e => {
+    if (!oyun || document.pointerLockElement === kanvas || !(e.buttons & 1)) return;
+    oyun.yaw -= e.movementX * 0.004; oyun.pitch = Math.max(-1.25, Math.min(1.1, oyun.pitch - e.movementY * 0.004));
+  });
   document.addEventListener('mousemove', e => {
     if (!oyun || document.pointerLockElement !== kanvas) return;
     oyun.yaw -= e.movementX * 0.0024; oyun.pitch = Math.max(-1.25, Math.min(1.1, oyun.pitch - e.movementY * 0.0024));
   });
-  document.addEventListener('mousedown', e => { if (oyun && document.pointerLockElement === kanvas && e.button === 0 && oyun.rol === 'serif') ates(); });
+  document.addEventListener('mousedown', e => {
+    if (!oyun || document.pointerLockElement !== kanvas || oyun.rol !== 'serif') return;
+    if (e.button === 0) ates();
+    if (e.button === 2) nisanAyarla(true);    // sağ tık basılıyken nişan lazeri
+  });
+  document.addEventListener('mouseup', e => { if (oyun && e.button === 2) nisanAyarla(false); });
+  kanvas.addEventListener('contextmenu', e => e.preventDefault());
+  function nisanAyarla(acik) { if (!oyun || oyun.rol !== 'serif' || !oyun.canli) acik = false; if (oyun) { oyun.nisan = acik; $('nisanBtn').classList.toggle('basili', acik); } }
+  function nisanDegistir() { if (oyun) nisanAyarla(!oyun.nisan); }
 
   // ---------- Girdi: dokunmatik ----------
   const joy = { id: null, cx: 0, cy: 0, x: 0, y: 0 }, bakis = { id: null, x: 0, y: 0 };
@@ -314,6 +365,8 @@
 
   $('kosBtn').onclick = () => { if (!oyun) return; oyun.kos = !oyun.kos; $('kosBtn').classList.toggle('basili', oyun.kos); };
   $('atesBtn').onclick = () => ates();
+  $('nisanBtn').onclick = () => nisanDegistir();
+  $('gorevPanelBtn').onclick = () => $('gorevListe').classList.toggle('gizli');
   $('eylemBtn').onclick = () => eylem();
   $('kameraBtn').onclick = () => kameraDegistir();
   $('telsizBtn').onclick = () => telsizDegistir();
@@ -338,7 +391,7 @@
   function yakinEylem() {
     if (!oyun || !oyun.canli || oyun.rol !== 'haydut' || oyun.is) return null;
     let en = null, ed = 2.4;
-    Kasaba.gorevler.forEach(g => { if (oyun.yapilan.has(g.id)) return; const d = Math.hypot(g.x - oyun.x, g.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'gorev', g }; } });
+    Kasaba.gorevler.forEach(g => { if (oyun.yapilan.has(g.id) || Math.abs(g.y - oyun.y) > 1.5) return; const d = Math.hypot(g.x - oyun.x, g.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'gorev', g }; } });
     if (!en && oyun.kilik > 0) Kasaba.kiliklar.forEach(k => { const d = Math.hypot(k.x - oyun.x, k.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'kilik', k }; } });
     return en;
   }
@@ -390,22 +443,63 @@
   }
 
   // ---------- Ateş ----------
-  function nisanHedefi() {
-    const k = Sahne.kamera, d = new THREE.Vector3(); k.getWorldDirection(d);
-    const ox = k.position.x, oy = k.position.y, oz = k.position.z;
+  // Işın: (o, d) yönünde ilk çarptığı karakter ve mesafe. tabanY: atanın bulunduğu kat yüksekliği
+  function isinAt(ox, oy, oz, d, haric, tabanY) {
     const l2 = Math.hypot(d.x, d.z) || 1e-6;
-    const duvar = Kasaba.isin(ox, oz, d.x / l2, d.z / l2, 60) / l2;
-    let en = -1, et = Math.min(duvar, 50 / l2);
+    let et = Math.min(Kasaba.isin(ox, oz, d.x / l2, d.z / l2, 60, Kasaba.katOf(tabanY)) / l2, 50 / l2);
+    if (d.y < -0.01) et = Math.min(et, (oy - tabanY) / -d.y);          // yere çarpar
+    let en = -1;
     varliklar.forEach((v, no) => {
-      if (no === oyun.benimNo || v.durum !== 0) return;
+      if (no === haric || v.durum !== 0 || Math.abs(v.y - tabanY) > 1.6) return;   // başka kattakine ulaşmaz
       // yatayda çembere çarpma
       const cx = ox - v.x, cz = oz - v.z, a = d.x * d.x + d.z * d.z, b = 2 * (cx * d.x + cz * d.z), c = cx * cx + cz * cz - 0.42 * 0.42;
-      const disk = b * b - 4 * a * c; if (disk < 0) return;
+      const disk = b * b - 4 * a * c; if (disk < 0 || a < 1e-9) return;
       const t = (-b - Math.sqrt(disk)) / (2 * a); if (t <= 0 || t >= et) return;
-      const y = oy + d.y * t; if (y < 0 || y > 1.95) return;
+      const y = oy + d.y * t; if (y < v.y || y > v.y + 1.95) return;
       et = t; en = no;
     });
-    return en;
+    return { no: en, t: et };
+  }
+  function nisanHedefi() {
+    const k = Sahne.kamera, d = new THREE.Vector3(); k.getWorldDirection(d);
+    return isinAt(k.position.x, k.position.y, k.position.z, d, oyun.benimNo, oyun.y).no;
+  }
+
+  // ---------- Nişan lazeri: nişan alan şeriflerin namlusundan beyaz ışın ----------
+  const lazerler = new Map();   // no → { cizgi, nokta }
+  const lazerMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, depthWrite: false });
+  const lazerGeo = new THREE.CylinderGeometry(0.035, 0.035, 1, 6), noktaGeo = new THREE.SphereGeometry(0.11, 10, 8);
+  const YUKARI = new THREE.Vector3(0, 1, 0);
+  function lazerleriGuncelle() {
+    const gorulen = new Set();
+    varliklar.forEach((v, no) => {
+      const ben = no === oyun.benimNo;
+      const p = ben ? (oyun.nisan && oyun.canli ? oyun.pitch : null) : v.nisan;
+      v.g.userData.nisan = p;
+      if (p == null || v.durum !== 0) return;
+      gorulen.add(no);
+      let l = lazerler.get(no);
+      if (!l) { l = { cizgi: new THREE.Mesh(lazerGeo, lazerMat), nokta: new THREE.Mesh(noktaGeo, lazerMat) }; Sahne.scene.add(l.cizgi, l.nokta); lazerler.set(no, l); }
+      let o, d;
+      if (ben && oyun.kamera === 'goz') {   // kendi gözümden: ışın ekranın ortasına gider
+        const k = Sahne.kamera; d = new THREE.Vector3(); k.getWorldDirection(d);
+        const sag = new THREE.Vector3().crossVectors(d, YUKARI).normalize();
+        o = k.position.clone().addScaledVector(sag, 0.05).addScaledVector(YUKARI, -0.05).addScaledVector(d, 1.2);
+        l.ince = true;
+      } else {
+        l.ince = false;
+        const yaw = ben ? oyun.yaw : v.yaw, boy = v.g.scale.y, cp = Math.cos(p);
+        d = new THREE.Vector3(Math.sin(yaw) * cp, Math.sin(p), Math.cos(yaw) * cp);
+        o = new THREE.Vector3(v.x - Math.cos(yaw) * 0.35, v.y + 1.48 * boy, v.z + Math.sin(yaw) * 0.35).addScaledVector(d, 0.95);
+      }
+      const h = isinAt(o.x, o.y, o.z, d, no, v.y), L = Math.max(0.05, h.t);
+      l.cizgi.position.copy(o).addScaledVector(d, L / 2);
+      l.cizgi.quaternion.setFromUnitVectors(YUKARI, d);
+      const kal = l.ince ? 0.3 : 1;   // kendi gözümden bakarken ince görünsün
+      l.cizgi.scale.set(kal, L, kal);
+      l.nokta.position.copy(o).addScaledVector(d, L);
+    });
+    lazerler.forEach((l, no) => { if (!gorulen.has(no)) { Sahne.scene.remove(l.cizgi, l.nokta); lazerler.delete(no); } });
   }
   function ates() {
     if (!oyun || oyun.rol !== 'serif' || !oyun.canli) return;
@@ -423,7 +517,7 @@
     if (v && !kendiGozum) {   // kolunu kaldırır, namlu alevi
       Karakter.atesEt(v.g);
       const p = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffdd55' }));
-      const y = v.yaw; p.position.set(v.x + Math.sin(y) * 0.95 - Math.cos(y) * 0.33, 1.48, v.z + Math.cos(y) * 0.95 + Math.sin(y) * 0.33);
+      const y = v.yaw; p.position.set(v.x + Math.sin(y) * 0.95 - Math.cos(y) * 0.33, v.y + 1.48, v.z + Math.cos(y) * 0.95 + Math.sin(y) * 0.33);
       Sahne.scene.add(p); setTimeout(() => Sahne.scene.remove(p), 90);
     }
     const h = varliklar.get(m.hedef);
@@ -462,14 +556,21 @@
     r.className = oyun.canli ? oyun.rol : 'olu';
     r.textContent = !oyun.canli ? '👻 Hayalet' : oyun.rol === 'haydut' ? '🦹 HAYDUT' : '⭐ ŞERİF';
     $('gorevSayac').textContent = `🎯 Görev: ${oyun.gorevSayi}/${oyun.ayar.hedef}`;
+    gorevListesi();
     $('hakYazi').textContent = oyun.rol === 'serif' ? `🔫 Hak: ${oyun.hak}` : `👔 Kılık: ${oyun.kilik}`;
     const serif = oyun.rol === 'serif' && oyun.canli;
     $('atesBtn').classList.toggle('gizli', !serif || !dokun);
     $('muhbirBtn').classList.toggle('gizli', !serif);
+    $('nisanBtn').classList.toggle('gizli', !serif || !dokun);
     $('muhbirBtn').disabled = oyun.muhbir <= 0 && !oyun.muhbirAktif;
     $('muhbirBtn').classList.toggle('aktif', oyun.muhbirAktif);
     $('nisan').className = serif ? 'serif' : '';
     $('telsizBtn').classList.toggle('gizli', !oyun.canli);
+  }
+  // Bütün görevlerin listesi: yapılanların üstü çizili (şerifler gecikmeli bildirimle öğrenir)
+  function gorevListesi() {
+    $('gorevPanelBtn').textContent = `📋 Görevler ${oyun.gorevSayi}/${oyun.ayar.hedef}${dokun ? '' : ' (L)'}`;
+    $('gorevListe').innerHTML = Kasaba.gorevler.map(g => `<li class="${oyun.yapilan.has(g.id) ? 'yapildi' : ''}">${g.emoji} ${kacis(g.ad)}</li>`).join('');
   }
   let toastSayac = null;
   function toast(html, ms = 2000) { const t = $('toast'); t.innerHTML = html; t.classList.add('goster'); clearTimeout(toastSayac); toastSayac = setTimeout(() => t.classList.remove('goster'), ms); }
@@ -493,7 +594,8 @@
     x.drawImage(haritaZemin, (mx - R + SN) * zs, (mz - R + SN) * zs, R * 2 * zs, R * 2 * zs, 0, 0, N, N);
     const olcek = N / 320;
     const nokta = (px, pz, r, renk, kenar = '#0008') => { x.beginPath(); x.arc(PX(px), PZ(pz), r * olcek, 0, 7); x.fillStyle = renk; x.fill(); x.lineWidth = 1.5 * olcek; x.strokeStyle = kenar; x.stroke(); };    if (oyun.rol === 'haydut') {
-      Kasaba.gorevler.forEach(g => { if (!oyun.yapilan.has(g.id)) nokta(g.x, g.z, 4.5, '#ffcc22'); });
+      x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+      Kasaba.gorevler.forEach(g => { if (!oyun.yapilan.has(g.id)) { nokta(g.x, g.z, 8, '#ffe08acc', '#7a5a10'); x.fillText('✉️', PX(g.x), PZ(g.z) + olcek); } });
       if (oyun.kilik > 0) Kasaba.kiliklar.forEach(k => nokta(k.x, k.z, 4, '#a070ff'));
     }
     const t = performance.now();
@@ -525,18 +627,19 @@
     Sahne.kapiCanlandir(dt);
     hareket(dt);
     varliklar.forEach((v, no) => {
-      if (no === oyun.benimNo) { v.x = oyun.x; v.z = oyun.z; v.yaw = oyun.govdeYaw; }
+      if (no === oyun.benimNo) { v.x = oyun.x; v.z = oyun.z; v.y = oyun.y; v.yaw = oyun.govdeYaw; }
       else {
         const k = Math.min(1, dt * 9);
-        if (Math.hypot(v.tx - v.x, v.tz - v.z) > 6) { v.x = v.tx; v.z = v.tz; }
-        v.x += (v.tx - v.x) * k; v.z += (v.tz - v.z) * k;
+        if (Math.hypot(v.tx - v.x, v.tz - v.z) > 6) { v.x = v.tx; v.z = v.tz; v.y = v.ty; }
+        v.x += (v.tx - v.x) * k; v.z += (v.tz - v.z) * k; v.y += (v.ty - v.y) * k;
         let f = ((v.tyaw - v.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; v.yaw += f * k;
       }
-      v.g.position.set(v.x, 0, v.z); v.g.rotation.y = v.yaw;
+      v.g.position.set(v.x, v.y, v.z); v.g.rotation.y = v.yaw;
       v.g.visible = !(no === oyun.benimNo && (!oyun.canli || oyun.kamera === 'goz'));
       Karakter.canlandir(v.g, no === oyun.benimNo ? oyun.h : v.h, dt);
     });
     kameraAyarla();
+    lazerleriGuncelle();
     if (elSilah) {
       elSilah.visible = oyun.rol === 'serif' && oyun.canli && oyun.kamera === 'goz';
       tepme = Math.max(0, tepme - dt * 4);
@@ -547,7 +650,7 @@
     }
     // İşaretler hafifçe zıplasın
     isaretler.forEach((s, i) => {
-      s.position.y = 2.9 + Math.sin(t / 400 + i) * 0.15;
+      s.position.y = (s.userData.taban || 0) + 2.9 + Math.sin(t / 400 + i) * 0.15;
       const yapildi = s.userData.gid && oyun.yapilan.has(s.userData.gid);
       const yakin = Math.hypot(s.position.x - oyun.x, s.position.z - oyun.z) < 3.5;   // dibindeyken ekranı kaplamasın
       s.visible = oyun.canli && !yapildi && !yakin && (!s.userData.kilik || oyun.kilik > 0);
@@ -581,17 +684,18 @@
       if (oyun.canli && oyun.is) Ag.eveGonder({ tip: 'iptal' });
       const hiz = !oyun.canli ? HAYALET : kos ? KOS : YURU;
       const nx = oyun.x + mx / ml * hiz * dt * Math.min(1, boy), nz = oyun.z + mz / ml * hiz * dt * Math.min(1, boy);
-      if (oyun.canli) { const p = Kasaba.it(nx, nz); oyun.x = p.x; oyun.z = p.z; }
+      if (oyun.canli) { const p = Kasaba.it(nx, nz, 0.35, Kasaba.katOf(oyun.y)); oyun.x = p.x; oyun.z = p.z; oyun.y = Kasaba.zeminY(p.x, p.z, oyun.y); }
       else { oyun.x = Math.max(-110, Math.min(110, nx)); oyun.z = Math.max(-110, Math.min(110, nz)); }
       oyun.h = kos ? 2 : 1;
-      const hedefYaw = oyun.kamera === 'goz' ? oyun.yaw : Math.atan2(mx, mz);
+      const hedefYaw = oyun.kamera === 'goz' || oyun.nisan ? oyun.yaw : Math.atan2(mx, mz);
       let f = ((hedefYaw - oyun.govdeYaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
       oyun.govdeYaw += f * Math.min(1, dt * 10);
-    } else if (oyun.kamera === 'goz') oyun.govdeYaw = oyun.yaw;
+    } else if (oyun.kamera === 'goz' || oyun.nisan) oyun.govdeYaw = oyun.yaw;   // nişan alırken gövde baktığın yöne döner
+    if (oyun.is && oyun.h === 0) oyun.h = 3;   // görev yaparken kasabalılar gibi elleriyle uğraşır
     const t = performance.now();
     if (oyun.canli && t - oyun.sonGonder > 66) {
       oyun.sonGonder = t;
-      Ag.eveGonder({ tip: 'konum', x: Math.round(oyun.x * 100) / 100, z: Math.round(oyun.z * 100) / 100, yaw: Math.round(oyun.govdeYaw * 100) / 100, h: oyun.h });
+      Ag.eveGonder({ tip: 'konum', x: Math.round(oyun.x * 100) / 100, z: Math.round(oyun.z * 100) / 100, y: Math.round(oyun.y * 100) / 100, n: oyun.nisan && oyun.canli ? Math.round(oyun.pitch * 100) / 100 : null, yaw: Math.round(oyun.govdeYaw * 100) / 100, h: oyun.h });
     }
   }
 
@@ -601,14 +705,16 @@
     const v = varliklar.get(oyun.benimNo);
     const boy = v ? v.g.scale.y : 1;
     if (oyun.kamera === 'goz' && oyun.canli) {
-      k.position.set(oyun.x + Math.sin(oyun.yaw) * 0.18, 1.66 * boy, oyun.z + Math.cos(oyun.yaw) * 0.18);
+      k.position.set(oyun.x + Math.sin(oyun.yaw) * 0.18, oyun.y + 1.66 * boy, oyun.z + Math.cos(oyun.yaw) * 0.18);
     } else {
       const yuk = oyun.canli ? 1.75 : 2.6, uzak = oyun.canli ? 3.6 : 5;
       const sagx = -Math.cos(oyun.yaw) * 0.55, sagz = Math.sin(oyun.yaw) * 0.55;
       const bx = oyun.x + sagx, bz = oyun.z + sagz;
       const l2 = Math.hypot(d.x, d.z) || 1;
-      const serbest = oyun.canli ? Math.max(0.6, Math.min(uzak, Kasaba.isin(bx, bz, -d.x / l2, -d.z / l2, uzak + 0.4) - 0.4)) : uzak;
-      k.position.set(bx - d.x * serbest, Math.max(0.4, yuk - d.y * serbest), bz - d.z * serbest);
+      const serbest = oyun.canli ? Math.max(0.6, Math.min(uzak, Kasaba.isin(bx, bz, -d.x / l2, -d.z / l2, uzak + 0.4, Kasaba.katOf(oyun.y)) - 0.4)) : uzak;
+      k.position.set(bx - d.x * serbest, Math.max(oyun.y + 0.4, oyun.y + yuk - d.y * serbest), bz - d.z * serbest);
+      // Bina içindeyken kamera tavanı delmesin
+      if (oyun.canli) k.position.y = Math.min(k.position.y, Kasaba.tavan(oyun.x, oyun.z, oyun.y), Kasaba.tavan(k.position.x, k.position.z, oyun.y));
       // Şerif odasındayken kamera çatının üstüne çıkmasın
       const so = Kasaba.serifOdasi;
       if (oyun.canli && Math.abs(oyun.x - so.x) < so.g / 2 && Math.abs(oyun.z - so.z) < so.d / 2) k.position.y = Math.min(k.position.y, so.y - 0.3);

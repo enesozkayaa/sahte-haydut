@@ -68,8 +68,9 @@ const Sahne = (() => {
       kutuEkle(5, 0.2, 0.2, 0, 3, 2.2, cerceve); kutuEkle(5, 0.2, 0.2, 0, 6, 2.2, cerceve);
       return;
     }
-    // Ana gövde
-    kutuEkle(g, y * 0.78, d, 0, y * 0.39, 0, duvar);
+    // Ana gövde (girilebilir binalar içi boş: duvar, kapı, merdiven, üst kat, eşyalar)
+    const H = b.ic ? Kasaba.duvarY(b) : y * 0.78;
+    if (b.ic) icCiz(b, duvar, kutuEkle); else kutuEkle(g, y * 0.78, d, 0, y * 0.39, 0, duvar);
     // Çatı
     if (b.tur === 'ambar') {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(g * 0.55, g * 0.55, d, 4, 1, false, Math.PI / 4), cati);
@@ -80,10 +81,11 @@ const Sahne = (() => {
       const egim = new THREE.Mesh(new THREE.CylinderGeometry(0.01, g * 0.62, y * 0.4, 4, 1), cati);
       egim.rotation.y = Math.PI / 4; egim.scale.set(1, 1, d / g); egim.position.y = y * 0.78 + y * 0.2; grup.add(egim);
     } else {
-      kutuEkle(g, 0.3, d, 0, y * 0.78 + 0.15, 0, cati);
+      kutuEkle(g + (b.ic ? 0.4 : 0), 0.3, d + (b.ic ? 0.4 : 0), 0, H + 0.15, 0, cati);
       // Batı tarzı yüksek ön cephe
-      kutuEkle(g, y * 0.32, 0.4, 0, y * 0.78 + y * 0.16, d / 2 - 0.2, duvar);
-      kutuEkle(g + 0.3, 0.3, 0.6, 0, y * 0.94 + 0.1, d / 2 - 0.2, cati);
+      const cy = Math.max(y * 0.32, 1.6);
+      kutuEkle(g, cy, 0.4, 0, H + cy / 2, d / 2 - 0.2 + (b.ic ? 0.2 : 0), duvar);
+      kutuEkle(g + 0.3, 0.3, 0.6, 0, H + cy + 0.1, d / 2 - 0.2 + (b.ic ? 0.2 : 0), cati);
     }
     // Kilise kulesi
     if (b.id === 'kilise') {
@@ -92,13 +94,15 @@ const Sahne = (() => {
       kutuEkle(0.25, 1.6, 0.25, 0, y * 0.78 + 11.6, d / 2 - 2, mat('#e8d27a')); kutuEkle(1, 0.25, 0.25, 0, y * 0.78 + 11.8, d / 2 - 2, mat('#e8d27a'));
     }
     // Kapı ve pencereler
-    const kapiG = b.tur === 'ambar' ? 0 : 1.8;
+    const kapiG = b.tur === 'ambar' || b.ic ? 0 : 1.8;
     if (kapiG) { kutuEkle(kapiG + 0.3, 2.7, 0.12, 0, 1.35, d / 2 + 0.03, cerceve); kutuEkle(kapiG, 2.5, 0.14, 0, 1.25, d / 2 + 0.05, mat('#5a3420')); }
-    const pencere = (x, yy) => { kutuEkle(1.5, 1.4, 0.1, x, yy, d / 2 + 0.03, cerceve); kutuEkle(1.25, 1.15, 0.12, x, yy, d / 2 + 0.05, cam); };
+    const on = b.ic ? d / 2 + Kasaba.DUVAR / 2 : d / 2;
+    const pencere = (x, yy) => { kutuEkle(1.5, 1.4, 0.1, x, yy, on + 0.03, cerceve); kutuEkle(1.25, 1.15, 0.12, x, yy, on + 0.05, cam); };
     if (b.tur !== 'ambar') {
       const adim = 3.6, n = Math.floor((g - 4) / adim / 2);
       for (let i = 1; i <= n; i++) { pencere(i * adim, 1.7); pencere(-i * adim, 1.7); }
-      if (y >= 8) for (let i = -n; i <= n; i++) if (i) pencere(i * adim, y * 0.6); else pencere(0, y * 0.6);
+      const ust = b.ic === 2 ? Kasaba.KAT_Y + 1.7 : y * 0.6;
+      if (y >= 8) for (let i = -n; i <= n; i++) if (i) pencere(i * adim, ust); else pencere(0, ust);
       // Saçak ve direkler
       if (Math.abs(b.z) < 40 && b.tur !== 'ev') {
         kutuEkle(g, 0.15, 2.4, 0, 3.2, d / 2 + 1.2, cati);
@@ -117,6 +121,81 @@ const Sahne = (() => {
     if (b.id === 'postane') { const direk = kutuEkle(0.25, 7, 0.25, 5, 3.5, d / 2 + 2.2, cerceve); kutuEkle(1.8, 0.15, 0.15, 5, 6.6, d / 2 + 2.2, cerceve); direk.userData.telgraf = true; }
     if (b.id === 'demirci') { const ocak = kutuEkle(1.6, 1, 1.2, 3.5, 0.5, d / 2 + 1.4, mat('#555')); kutuEkle(1.2, 0.2, 0.8, 3.5, 1.05, d / 2 + 1.4, mat('#ff6a1a', { emissive: '#ff4a00' })); ocak.userData = {}; kutuEkle(0.6, 0.5, 0.4, -3.5, 0.6, d / 2 + 1.4, mat('#2a2a2e')); }
     if (b.id === 'salon') { kutuEkle(1.4, 1.2, 0.1, -0.8, 1.5, d / 2 + 0.25, mat('#7a4a20')); kutuEkle(1.4, 1.2, 0.1, 0.8, 1.5, d / 2 + 0.25, mat('#7a4a20')); }
+  }
+
+  // ---------- Girilebilir bina içi ----------
+  // Yerel koordinat: x = u (yana), z = w (ön +). Grup zaten binanın yönüne döndürülmüş.
+  function icCiz(b, duvarMat, kutuEkle) {
+    const g2 = b.g / 2, d2 = b.d / 2, K = Kasaba.DUVAR, kg = Kasaba.KAPI / 2, H = Kasaba.duvarY(b), KY = Kasaba.KAT_Y;
+    const icDuvar = mat(koyu(b.renk, 0.82)), tahta = mat('#8a6440'), koyuT = mat('#5a3a20'), cerceve = mat('#4a3020');
+    // İç yüzeyler biraz koyu olsun diye duvarlar dış renkte, içine ince koyu kaplama
+    for (const w of [d2, -d2]) {
+      kutuEkle(g2 - kg, H, K, -(g2 + kg) / 2, H / 2, w, duvarMat); kutuEkle(g2 - kg, H, K, (g2 + kg) / 2, H / 2, w, duvarMat);
+      kutuEkle(kg * 2, H - 2.6, K, 0, 2.6 + (H - 2.6) / 2, w, duvarMat);                  // kapı üstü
+      kutuEkle(kg * 2 + 0.3, 0.2, K + 0.1, 0, 2.7, w, cerceve);                           // kapı kirişi
+      [-1, 1].forEach(s => kutuEkle(0.15, 2.6, K + 0.1, s * (kg + 0.05), 1.3, w, cerceve));
+      // Açık kapı kanadı (içe doğru açılmış)
+      const kanat = kutuEkle(0.1, 2.4, kg * 2 - 0.1, kg - 0.05, 1.2, w - Math.sign(w) * (kg + 0.1), mat('#5a3420'));
+      kanat.position.x = kg + 0.05; kanat.position.z = w - Math.sign(w) * (kg + 0.05);
+    }
+    kutuEkle(K, H, b.d + K, -g2, H / 2, 0, duvarMat); kutuEkle(K, H, b.d + K, g2, H / 2, 0, duvarMat);
+    // İç kaplama (koyu) ve zemin
+    kutuEkle(b.g - K - 0.02, 0.06, b.d - K - 0.02, 0, 0.04, 0, tahta);
+    // Arka cephede "ARKA KAPI" gibi görünmesin diye küçük saçak
+    kutuEkle(3.2, 0.12, 1.2, 0, 2.95, -d2 - 0.6, mat(koyu(b.renk, 0.55)));
+    if (b.ic === 2) {
+      const m = Kasaba.merdiven(b), L = m.wAlt - m.wUst, sw = m.u2 - m.u1;
+      // Üst kat zemini (merdiven boşluğu hariç) + sahanlık
+      kutuEkle(g2 - m.u2, 0.25, b.d - K, (m.u2 + g2) / 2, KY - 0.125, 0, tahta);
+      kutuEkle(sw, 0.25, (m.wUst + d2) - K / 2, (m.u1 + m.u2) / 2, KY - 0.125, (m.wUst - d2 + K / 2) / 2, tahta);
+      // Merdiven basamakları
+      const n = 14;
+      for (let i = 0; i < n; i++) {
+        const h = KY * (i + 1) / n, wz = m.wAlt - (i + 0.5) * L / n;
+        kutuEkle(sw, h, L / n + 0.02, (m.u1 + m.u2) / 2, h / 2, wz, i % 2 ? koyuT : tahta);
+      }
+      // Üst kat korkuluğu
+      const kL = d2 - m.wUst;
+      kutuEkle(0.1, 1, kL, m.u2, KY + 0.5, m.wUst + kL / 2, cerceve);
+      for (let w = m.wUst; w <= d2 - 0.3; w += 1.2) kutuEkle(0.12, 1, 0.12, m.u2, KY + 0.5, w, cerceve);
+      // İç tavan lambası
+      kutuEkle(0.4, 0.4, 0.4, 2, KY - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
+      kutuEkle(0.4, 0.4, 0.4, 2, H - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
+    } else kutuEkle(0.4, 0.4, 0.4, 0, H - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
+    esyalar(b, kutuEkle, KY);
+  }
+  // Görev yerlerinin yanındaki eşyalar (çarpışmasız, sadece görüntü)
+  function esyalar(b, k, KY) {
+    const d2 = b.d / 2, g2 = b.g / 2;
+    const ahsap = mat('#6a4424'), koyu2 = mat('#3a2a1a'), metal = mat('#55555e'), yesil = mat('#2f6a3a'), beyaz = mat('#eeeae0');
+    const masa = (x, z, yy = 0, renk = ahsap) => { k(1.6, 0.12, 1, x, yy + 0.8, z, renk); [[-0.7, -0.4], [0.7, -0.4], [-0.7, 0.4], [0.7, 0.4]].forEach(([a, c]) => k(0.1, 0.8, 0.1, x + a, yy + 0.4, z + c, ahsap)); };
+    switch (b.id) {
+      case 'banka':
+        k(2.2, 2.2, 0.9, 4, 1.1, -d2 + 0.75, metal); k(0.5, 0.5, 0.1, 4, 1.2, -d2 + 1.25, mat('#c9a23a'));   // kasa
+        k(6, 1.1, 0.7, -2, 0.55, -1, ahsap); break;                                                             // gişe
+      case 'salon':
+        k(7, 1.1, 0.8, 4, 0.55, -3.2, ahsap); k(7, 1.6, 0.4, 4, 2, -d2 + 0.4, koyu2);                          // bar ve raf
+        for (let i = 0; i < 6; i++) k(0.12, 0.35, 0.12, 1.5 + i, 1.3, -3.2, mat(i % 2 ? '#3a7a3a' : '#7a3a20'));
+        masa(-2, 2); masa(3, 3); k(1.6, 1.3, 0.6, -5.5, 0.65, -d2 + 0.5, koyu2);                                // masalar, piyano
+        masa(5, -2, KY, yesil); masa(-2, 2, KY); break;                                                         // üst kat kumar masası
+      case 'otel':
+        k(4, 1.1, 0.8, 3, 0.55, -2, ahsap);                                                                    // resepsiyon
+        [[5, -5.5], [5, 3], [-2, -5.5]].forEach(([x, z]) => { k(2.2, 0.5, 1.2, x, KY + 0.25, z, beyaz); k(2.2, 0.8, 0.2, x, KY + 0.4, z - 0.6, ahsap); });
+        break;
+      case 'belediye':
+        masa(-2, -2); k(1.2, 2, 0.6, 3, KY + 1, -d2 + 0.5, ahsap); masa(3, -3, KY); break;                      // üst kat dolap ve masa
+      case 'postane':
+        k(6, 1.1, 0.7, 0, 0.55, -2, ahsap); [-2, 0, 2].forEach(x => k(0.6, 0.6, 0.6, x + 3, 0.3, -d2 + 0.8, mat('#9a7a4a'))); break;
+      case 'silahci':
+        k(5, 1.1, 0.7, 0, 0.55, -1.8, ahsap); k(5, 1.6, 0.2, 2, 1.6, -d2 + 0.3, koyu2);
+        for (let i = 0; i < 5; i++) k(0.08, 1.1, 0.08, 0.2 + i * 0.8, 1.6, -d2 + 0.45, metal); break;          // tüfek rafı
+      case 'firin':
+        k(2, 1.6, 1.2, -2.5, 0.8, -d2 + 0.8, mat('#9a4a2a')); k(0.8, 0.5, 0.1, -2.5, 0.8, -d2 + 1.42, mat('#ff7a2a', { emissive: '#aa4a10' }));
+        k(3, 1.2, 0.6, 2.5, 0.6, -d2 + 0.5, ahsap); for (let i = 0; i < 4; i++) k(0.4, 0.2, 0.3, 1.4 + i * 0.7, 1.3, -d2 + 0.5, mat('#e2a85a')); break;
+      case 'doktor':
+        k(2, 0.6, 1, -2.5, 0.3, -d2 + 1, beyaz); k(1.6, 1.8, 0.5, 2.5, 0.9, -d2 + 0.35, beyaz);
+        for (let i = 0; i < 4; i++) k(0.12, 0.25, 0.12, 1.9 + i * 0.4, 1.4, -d2 + 0.6, mat('#4a8ab0')); break;
+    }
   }
 
   function alanlarCiz() {

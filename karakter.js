@@ -139,6 +139,15 @@ const Karakter = (() => {
       u.govdeG.rotation.x = -Math.PI / 2 * u.olum; u.govdeG.position.y = 0.15 * u.olum;
       return;
     }
+    if (h === 3) {   // görev yapıyor: kollar önde, elleri bir şeyle uğraşıyor
+      u.faz += dt * 9;
+      const yum = (a, b) => a + (b - a) * Math.min(1, dt * 10);
+      u.bacakL.rotation.x = yum(u.bacakL.rotation.x, 0); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, 0);
+      u.kolL.rotation.x = yum(u.kolL.rotation.x, -1.05 + Math.sin(u.faz) * 0.3);
+      if (!u.serif) u.kolR.rotation.x = yum(u.kolR.rotation.x, -1.05 - Math.sin(u.faz) * 0.3);
+      u.govdeG.rotation.x = yum(u.govdeG.rotation.x, 0.12); u.govdeG.position.y = 0;
+      return;
+    }
     const hiz = h === 2 ? 13 : h === 1 ? 7.5 : 0, gen = h === 2 ? 0.95 : 0.55;
     if (hiz) u.faz += dt * hiz;
     const hedef = hiz ? Math.sin(u.faz) * gen : 0;
@@ -148,8 +157,9 @@ const Karakter = (() => {
     u.kolL.rotation.x = yumusak(u.kolL.rotation.x, -hedef * 0.8);
     if (u.serif) {   // şerif tabancayı tutar; ateş edince kolunu kaldırıp nişan alır
       u.atesT = Math.max(0, u.atesT - dt);
-      const kol = u.atesT > 0 ? -1.5 : -0.32 + hedef * 0.2;
-      u.kolR.rotation.x = u.atesT > 0.35 ? kol : yumusak(u.kolR.rotation.x, kol);
+      // nişandayken kol bakış açısıyla birlikte ileri uzanır
+      const kol = u.nisan != null ? -Math.PI / 2 - u.nisan : u.atesT > 0 ? -1.5 : -0.32 + hedef * 0.2;
+      u.kolR.rotation.x = u.atesT > 0.35 && u.nisan == null ? kol : yumusak(u.kolR.rotation.x, kol);
     } else u.kolR.rotation.x = yumusak(u.kolR.rotation.x, hedef * 0.8);
     u.govdeG.position.y = hiz ? Math.abs(Math.sin(u.faz)) * (h === 2 ? 0.08 : 0.03) : 0;
     u.govdeG.rotation.x = yumusak(u.govdeG.rotation.x, h === 2 ? 0.18 : 0);

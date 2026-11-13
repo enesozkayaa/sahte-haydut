@@ -19,14 +19,14 @@ const Motor = (() => {
 
   function rastgeleYer() {
     for (let i = 0; i < 30; i++) {
-      const u = sec(Kasaba.ugraklar), x = u.x + rnd(-3, 3), z = u.z + rnd(-3, 3);
+      const u = sec(Kasaba.ugraklar.filter(a => !a.kat && !a.bina)), x = u.x + rnd(-3, 3), z = u.z + rnd(-3, 3);
       if (!Kasaba.icerde(x, z, 0.6)) return { x, z };
     }
     return { x: rnd(-60, 60), z: rnd(-4, 4) };
   }
   function npcYap(no, yer) {
     const p = yer || rastgeleYer();
-    return { no, oyuncuId: null, tip: Math.floor(Math.random() * 10), x: p.x, z: p.z, yaw: rnd(-3, 3), h: 0, durum: 0,
+    return { no, oyuncuId: null, tip: Math.floor(Math.random() * 10), x: p.x, z: p.z, y: 0, yaw: rnd(-3, 3), h: 0, durum: 0,
       yol: null, bekle: rnd(0, 4), bakis: null, hizK: rnd(0.93, 1.07), kacis: 0, kacisYon: 0, ilerleme: { t: 0, x: p.x, z: p.z }, olumZaman: 0 };
   }
 
@@ -34,8 +34,10 @@ const Motor = (() => {
   function baslat(oyuncular, ayar, geriCagir) {
     cb = geriCagir;
     const n = oyuncular.length;
-    const hayN = Math.max(1, Math.min(n - 1, ayar.haydut | 0));
-    const sirali = karistir(oyuncular.map(p => p.id));
+    // Roller: "secim" modunda herkes bekleme odasında kendi seçti; değilse rastgele dağıt
+    const secim = ayar.rolMod !== 'rastgele' && oyuncular.some(p => p.rol === 'haydut') && oyuncular.some(p => p.rol === 'serif');
+    const hayN = secim ? oyuncular.filter(p => p.rol === 'haydut').length : Math.max(1, Math.min(n - 1, ayar.haydut | 0));
+    const sirali = secim ? [...oyuncular.filter(p => p.rol === 'haydut'), ...oyuncular.filter(p => p.rol !== 'haydut')].map(p => p.id) : karistir(oyuncular.map(p => p.id));
     const toplam = ayar.kasabali + n;
     const nolar = karistir([...Array(toplam).keys()]);
     o = {
@@ -86,13 +88,14 @@ const Motor = (() => {
     switch (m.tip) {
       case 'konum':
         if (!canlimi(p) || !v) return;
-        v.x = +m.x || 0; v.z = +m.z || 0; v.yaw = +m.yaw || 0; v.h = m.h | 0;
+        v.x = +m.x || 0; v.z = +m.z || 0; v.y = Math.max(0, Math.min(Kasaba.KAT_Y, +m.y || 0)); v.yaw = +m.yaw || 0; v.h = Math.max(0, Math.min(3, m.h | 0));
+        v.nisan = p.rol === 'serif' && typeof m.n === 'number' ? Math.max(-1.3, Math.min(1.2, m.n)) : null;   // şerifin lazerli nişanı (bakış açısı)
         if (p.is && Math.hypot(v.x - p.is.x, v.z - p.is.z) > 0.9) isIptal(p);
         break;
       case 'gorev': {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is) return;
         const g = Kasaba.gorevler.find(x => x.id === m.gid);
-        if (!g || o.yapilan.has(g.id) || Math.hypot(v.x - g.x, v.z - g.z) > 2.8) return;
+        if (!g || o.yapilan.has(g.id) || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5) return;
         p.is = { tur: 'gorev', gid: g.id, bitis: Date.now() + g.sure * 1000, x: v.x, z: v.z };
         cb.kisiye(id, { tip: 'is', ad: g.ad, sure: g.sure });
         break;
@@ -164,34 +167,36 @@ const Motor = (() => {
     if (v.kacis > 0) {
       v.kacis -= dt; v.h = 2;
       const nx = v.x + Math.sin(v.kacisYon) * KOS * dt, nz = v.z + Math.cos(v.kacisYon) * KOS * dt;
-      const p = Kasaba.it(nx, nz);
+      const p = Kasaba.it(nx, nz, 0.35, Kasaba.katOf(v.y));
       if (Math.hypot(p.x - nx, p.z - nz) > 0.05) v.kacisYon += rnd(0.8, 1.6);   // duvara çarptı, yön değiştir
-      v.x = p.x; v.z = p.z; v.yaw = donus(v.yaw, v.kacisYon, dt * 5, dt * 4);
-      if (v.kacis <= 0) { v.bekle = rnd(0.5, 2); v.h = 0; }
+      v.x = p.x; v.z = p.z; v.y = Kasaba.zeminY(v.x, v.z, v.y); v.yaw = donus(v.yaw, v.kacisYon, dt * 5, dt * 4);
+      if (v.kacis <= 0) { v.bekle = rnd(0.5, 2); v.h = 0; v.calisiyor = false; }
       return;
     }
     if (v.bekle > 0) {
-      v.bekle -= dt; v.h = 0;
+      v.bekle -= dt; v.h = v.calisiyor ? 3 : 0;   // görev yerinde elleriyle iş yapıyormuş gibi
       if (v.bakis !== null) v.yaw = donus(v.yaw, v.bakis, dt * 2.2, dt * 2);
       return;
     }
     if (!v.yol || !v.yol.length) {
       const u = sec(Kasaba.ugraklar);
       v.hedef = u;
-      v.yol = Kasaba.yol(v.x, v.z, u.x + rnd(-0.8, 0.8), u.z + rnd(-0.6, 0.6));
+      const oyna = u.bina ? 0.3 : 0.8;   // bina içinde hedefe daha tam git
+      v.yol = Kasaba.yol(v.x, v.z, u.x + rnd(-oyna, oyna), u.z + rnd(-oyna, oyna), v.y, u.kat, u.bina);
       v.ilerleme = { t: 0, x: v.x, z: v.z };
       return;
     }
     const n = v.yol[0], dx = n.x - v.x, dz = n.z - v.z, d = Math.hypot(dx, dz);
     const sonNokta = v.yol.length === 1;
     // Köşeleri keskin dönmesin: ara noktaya yaklaşınca bir sonrakine yönelir (köşeyi yuvarlar)
-    if (d < (sonNokta ? 0.3 : 1.4)) {
+    if (d < (sonNokta || n.tam ? 0.3 : 1.4)) {
       v.yol.shift();
-      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; }
+      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = !!v.hedef?.gorev && Math.random() < 0.8; }
       return;
     }
     // Ara sıra caddede durup etrafa bakar
-    if (Math.random() < dt * 0.025) { v.bekle = rnd(1, 3); v.bakis = v.yaw + rnd(-1.5, 1.5); return; }
+    const merdivende = v.y > 0.1 && v.y < Kasaba.KAT_Y - 0.1;
+    if (!merdivende && !n.tam && Math.random() < dt * 0.025) { v.bekle = rnd(1, 3); v.bakis = v.yaw + rnd(-1.5, 1.5); v.calisiyor = false; return; }
     // Yön yavaş yavaş döner (oyuncunun karakteri gibi); çok ters yöndeyse yavaşlayıp döner
     const hedefYon = Math.atan2(dx, dz);
     v.yaw = donus(v.yaw, hedefYon, dt * DONUS * 1.6, dt * DONUS);
@@ -199,9 +204,10 @@ const Motor = (() => {
     const yavas = fark > 1.4 ? 0.25 : fark > 0.7 ? 0.6 : 1;
     const adim = Math.min(d, YURU * v.hizK * yavas * dt);
     // Varış noktasına çok yakınken doğrudan git (etrafında dönüp durmasın)
-    const gx = sonNokta && d < 1.2 ? dx / d : Math.sin(v.yaw), gz = sonNokta && d < 1.2 ? dz / d : Math.cos(v.yaw);
-    const p = Kasaba.it(v.x + gx * adim, v.z + gz * adim);
-    v.x = p.x; v.z = p.z; v.h = 1;
+    const dogrudan = (sonNokta && d < 1.2) || (n.tam && fark < 0.9);   // merdivende dar yolda doğrudan yürü
+    const gx = dogrudan ? dx / d : Math.sin(v.yaw), gz = dogrudan ? dz / d : Math.cos(v.yaw);
+    const p = Kasaba.it(v.x + gx * adim, v.z + gz * adim, 0.35, Kasaba.katOf(v.y));
+    v.x = p.x; v.z = p.z; v.y = Kasaba.zeminY(v.x, v.z, v.y); v.h = 1;
     // Takıldıysa yeni yol
     v.ilerleme.t += dt;
     if (v.ilerleme.t > 4) {
@@ -248,7 +254,7 @@ const Motor = (() => {
     });
     // Konum paketi
     const v = [];
-    o.varliklar.forEach(x => v.push(x.no, Math.round(x.x * 10), Math.round(x.z * 10), Math.round(x.yaw * 100), x.h, x.tip, x.durum));
+    o.varliklar.forEach(x => v.push(x.no, Math.round(x.x * 10), Math.round(x.z * 10), Math.round(x.yaw * 100), x.h, x.tip, x.durum, Math.round((x.y || 0) * 10), x.nisan == null || x.durum ? 0 : Math.round((x.nisan + 3) * 100)));
     cb.herkese({ tip: 'd', k: Math.max(0, Math.round((o.bitis - simdi) / 1000)), v });
     if (simdi - o.sonSes > 300) { o.sonSes = simdi; sesTablosu(); }
     kontrol();

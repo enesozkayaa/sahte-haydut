@@ -584,7 +584,7 @@
   const YAKIN = 34;
   function haritaCiz() {
     const c = $('harita'), buyuk = c.classList.contains('buyuk');
-    const istenen = buyuk ? 900 : 320;
+    const istenen = buyuk ? 640 : 320;
     if (c.width !== istenen) { c.width = c.height = istenen; }
     const x = c.getContext('2d'), N = c.width, Z = haritaZemin.width, SN = Kasaba.SINIR;
     // Görünen bölge (dünya koordinatı): merkez ve yarıçap

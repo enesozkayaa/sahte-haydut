@@ -48,7 +48,8 @@ label { font-weight: 800; font-size: 14px; }
 #toast { position: absolute; left: 50%; top: 27%; transform: translateX(-50%); font-family: Rye, serif; font-size: clamp(20px, 5vw, 32px); text-align: center; opacity: 0; transition: opacity .3s; width: 90%; }
 #toast.goster { opacity: 1; }
 #harita { position: absolute; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); width: 190px; height: 190px; border: 3px solid #6a4424; border-radius: 8px; background: #d9a866; pointer-events: auto; box-shadow: 0 4px 14px #0007; }
-#harita.buyuk { width: min(86vw, 86vh); height: min(86vw, 86vh); left: 50%; bottom: 50%; transform: translate(-50%, 50%); z-index: 30; }
+/* Büyük harita: yerinde (sol altta) büyür, ekranın ortasını kapatmaz; bütün kasaba görünür */
+#harita.buyuk { width: min(380px, 52vh, 46vw); height: min(380px, 52vh, 46vw); z-index: 30; }
 #nisan { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 3px #000; }
 #nisan.serif { width: 26px; height: 26px; margin: -13px 0 0 -13px; background: none; border: 2px solid #fff; box-shadow: 0 0 3px #000, inset 0 0 3px #000; }
 #nisan.serif::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #ff4a3a; }

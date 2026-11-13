@@ -9,6 +9,9 @@ const Kasaba = (() => {
   const CADDE = 9;             // ana cadde z -9..9
   const ARA = 8;               // ara sokak x -8..8
   const KAT_Y = 3.2;           // üst katın zemin yüksekliği
+  // Görev hareketleri (karakter.js pozları). Ağda h = 10 + sıra
+  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras'];
+  const animKodu = ad => 10 + Math.max(0, ANIMLER.indexOf(ad));
   const DUVAR = 0.4, KAPI = 2.2;
 
   // Bina: id, ad, emoji, x, z (merkez), g (x boyu), d (z boyu), y (yükseklik), renk, kapi ('g' = kapı +z yönünde, 'k' = -z yönünde), ic (girilebilir: 1/2 kat)
@@ -25,7 +28,7 @@ const Kasaba = (() => {
     B('otel', 'Otel', '🏨', 19, kz(15), 18, 15, 11, '#6f7f5a', 'g', 'bina', 2),
     B('postane', 'Postane', '✉️', 38, kz(11), 13, 11, 6.5, '#7b8fa3', 'g', 'bina', 1),
     B('belediye', 'Belediye', '🏛️', 55, kz(13), 15, 13, 9, '#c8b48a', 'g', 'bina', 2),
-    B('ev2', 'Ev', '🏠', 73, kz(10), 11, 10, 5, '#8fa07a', 'g', 'ev'),
+    B('berber', 'Berber', '💈', 73, kz(10), 11, 10, 5.5, '#cfe0e8', 'g'),
     // Güney sıra
     B('ev3', 'Ev', '🏠', -76, gz(10), 10, 10, 5, '#b0907a', 'k', 'ev'),
     B('silahci', 'Silahçı', '🔫', -62, gz(10), 12, 10, 6, '#5d4a3a', 'k', 'bina', 1),
@@ -68,6 +71,9 @@ const Kasaba = (() => {
     { tur: 'kaktus', x: 66, z: 30, r: 0.5 }, { tur: 'kaktus', x: -20, z: 80, r: 0.5 }, { tur: 'kaktus', x: 30, z: -82, r: 0.5 },
     { tur: 'kaktus', x: 84, z: 76, r: 0.5 }, { tur: 'kaktus', x: -84, z: -76, r: 0.5 },
   ];
+  // Posta kutuları: şerifler buradan (en az 10 sn geriden) hangi görevlerin yapıldığını öğrenir
+  const postaKutulari = [{ x: -53, z: 7.4 }, { x: -10, z: -7.4 }, { x: 10, z: 7.4 }, { x: 46, z: -7.4 }, { x: -25, z: 40 }, { x: 40, z: -40 }];
+  postaKutulari.forEach(p => engeller.push({ tur: 'posta', x: p.x, z: p.z, r: 0.45 }));
   const RAY_Z = -78;     // demiryolu (görsel)
 
   const binaBul = id => binalar.find(b => b.id === id) || alanlar.find(a => a.id === id);
@@ -94,29 +100,34 @@ const Kasaba = (() => {
   }
 
   // Görevler: haydutlar yapar. olay = şeriflere giden bildirim yazısı
-  const G = (id, ad, olay, emoji, sure, yer) => ({ id, ad, olay, emoji, sure, y: 0, kat: 0, ...yer });
+  // anim: görevi yapanın hareketi (karakter.js ANIMLER). Botlar da görev yerinde aynı hareketi yapar.
+  const G = (id, ad, olay, emoji, sure, yer, anim = 'ara') => ({ id, ad, olay, emoji, sure, y: 0, kat: 0, ...yer, anim });
   const gorevler = [
-    G('banka', 'Banka kasasını soy', 'Banka kasası soyuldu', '🏦', 6, icNokta('banka', 4, -5)),
-    G('anahtar', 'Hapishane anahtarını çal', 'Şerif ofisinden hapishane anahtarı çalındı', '🔑', 5, icNokta('serif', -3, -3)),
-    G('afis', 'Aranıyor afişlerini yırt', 'Aranıyor afişleri yırtıldı', '📜', 3, kapiOnu('serif', 4.5)),
+    G('banka', 'Banka kasasını soy', 'Banka kasası soyuldu', '🏦', 6, icNokta('banka', 4, -5), 'cevir'),
+    G('anahtar', 'Hapishane anahtarını çal', 'Şerif ofisinden hapishane anahtarı çalındı', '🔑', 5, icNokta('serif', -3, -3), 'uzan'),
+    G('afis', 'Aranıyor afişlerini yırt', 'Aranıyor afişleri yırtıldı', '📜', 3, kapiOnu('serif', 4.5), 'yirt'),
     G('kasa', 'Salonun kasasından para al', 'Salonun kasası boşaltıldı', '💰', 4, icNokta('salon', 4, -1.6)),
-    G('kumar', 'Üst katta kumar masasında hile yap', 'Salonun üst katında kumar masasında hile yapıldı', '🃏', 4, icNokta('salon', 3, -2, 1, Math.PI / 2)),
+    G('kumar', 'Üst katta kumar masasında hile yap', 'Salonun üst katında kumar masasında hile yapıldı', '🃏', 4, icNokta('salon', 3, -2, 1, Math.PI / 2), 'kumar'),
     G('otel', 'Üst kattaki otel odalarını ara', 'Otelin üst katındaki odalar arandı', '🛏️', 5, icNokta('otel', 5, -4.1, 1)),
     G('posta', 'Posta çantasını çal', 'Postaneden posta çantası çalındı', '✉️', 4, icNokta('postane', 3, -3.5)),
-    G('telgraf', 'Telgraf telini kes', 'Telgraf teli kesildi', '⚡', 3, kapiOnu('postane', 5)),
+    G('telgraf', 'Telgraf telini kes', 'Telgraf teli kesildi', '⚡', 3, kapiOnu('postane', 5), 'kes'),
     G('tapu', 'Belediyenin üst katından tapuyu çal', 'Belediyenin üst katından tapu çalındı', '📃', 5, icNokta('belediye', 3, -4.5, 1)),
     G('tabanca', 'Silahçıdan tabanca çal', 'Silahçıdan tabanca çalındı', '🔫', 4, icNokta('silahci', 3, -3.2)),
     G('ekmek', 'Fırından ekmek çal', 'Fırından ekmek çalındı', '🍞', 3, icNokta('firin', 2.5, -3.2)),
     G('ilac', 'Doktordan ilaç çal', 'Doktordan ilaç çalındı', '💊', 4, icNokta('doktor', 2.5, -3.2)),
     G('altin', 'Altın tozu çal', 'Madenciden altın tozu çalındı', '✨', 5, icNokta('madenci', 2.5, -3)),
-    G('kilit', 'Demircide kilit kır', 'Demircide kilit kırıldı', '🔨', 4, kapiOnu('demirci')),
+    G('kilit', 'Demircide örste kilit kır', 'Demircide kilit kırıldı', '🔨', 4, icNokta('demirci', -2, 0.25), 'dov'),
     G('bagis', 'Bağış kutusunu boşalt', 'Kilisenin bağış kutusu boşaltıldı', '⛪', 4, icNokta('kilise', 3, -6)),
-    G('dinamit', 'Raya dinamit koy', 'Demiryoluna dinamit kondu', '🧨', 6, { x: -64, z: -72, yon: Math.PI }),
-    G('su', 'Su kulesini del', 'Su kulesi delindi', '💧', 4, kapiOnu('sukulesi')),
-    G('kibrit', 'Samanlığa kibrit at', 'Samanlıkta yangın çıktı', '🔥', 4, icNokta('samanlik', 3, -3)),
+    G('dinamit', 'Raya dinamit koy', 'Demiryoluna dinamit kondu', '🧨', 6, { x: -64, z: -72, yon: Math.PI }, 'cok'),
+    G('su', 'Su kulesini del', 'Su kulesi delindi', '💧', 4, kapiOnu('sukulesi'), 'dov'),
+    G('kibrit', 'Samanlığa kibrit at', 'Samanlıkta yangın çıktı', '🔥', 4, icNokta('samanlik', 3, -3), 'cok'),
     G('at', 'Ahırdan at çal', 'Ahırdan at çalındı', '🐎', 5, icNokta('ahir', -4, -2)),
-    G('sigir', 'Sığırları ağıldan sal', 'Sığırlar ağıldan kaçtı', '🐄', 4, { x: -16, z: 54.5, yon: 0 }),
+    G('sigir', 'Sığırları ağıldan sal', 'Sığırlar ağıldan kaçtı', '🐄', 4, { x: -16, z: 54.5, yon: 0 }, 'uzan'),
+    G('zehir', 'Kasaba kuyusuna zehir dök', 'Kasaba kuyusuna zehir döküldü', '☠️', 5, { x: 0, z: 2.4, yon: Math.PI }, 'dok'),
+    G('tras', 'Berberde tıraş olurken kasayı gözetle', 'Berberin kasası soyuldu', '💈', 6, icNokta('berber', 2, -2.6), 'otur'),
   ];
+  // Berber ustası koltuğun arkasında durur (müşteri oturunca tıraş eder)
+  const berberUsta = icNokta('berber', 2, -1.75);
   // Kılık değiştirme noktaları
   const kiliklar = [
     { id: 'terzi', ad: 'Terzi', ...icNokta('terzi', 2.5, -3) },
@@ -294,8 +305,8 @@ const Kasaba = (() => {
 
   // Botların uğrayacağı ilginç yerler: görevler, kılık yerleri, kapılar, bina içleri, caddede rastgele noktalar
   const ugraklar = [
-    ...gorevler.map(g => ({ x: g.x, z: g.z, yon: g.yon, kat: g.kat, bina: g.bina || null, gorev: true, bekle: [4, 10] })),   // botlar da görev yapıyormuş gibi bekler
-    ...kiliklar.map(k => ({ x: k.x, z: k.z, yon: k.yon, kat: 0, bekle: [3, 7] })),
+    ...gorevler.map(g => ({ x: g.x, z: g.z, yon: g.yon, kat: g.kat, bina: g.bina || null, gorev: true, anim: g.anim, bekle: [4, 10] })),   // botlar da görev yapıyormuş gibi bekler
+    ...kiliklar.map(k => ({ x: k.x, z: k.z, yon: k.yon, kat: 0, gorev: true, anim: 'ara', bekle: [3, 7] })),
     ...binalar.filter(b => b.tur === 'ev').map(b => ({ ...kapiOnu(b.id), bekle: [2, 6] })),
   ];
   // Bina içlerinde gezinme noktaları (zeminde ve üst katta)
@@ -311,7 +322,7 @@ const Kasaba = (() => {
   function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
 
   return {
-    serifOdasi, odadaYer, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
+    serifOdasi, odadaYer, berberUsta, ANIMLER, animKodu, postaKutulari, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
     SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
     it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
   };

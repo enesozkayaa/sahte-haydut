@@ -19,7 +19,7 @@ const Sahne = (() => {
     scene.add(new THREE.HemisphereLight('#fff3dc', '#a0703f', 0.95));
     const gunes = new THREE.DirectionalLight('#fff0d0', 0.9); gunes.position.set(60, 100, 30); scene.add(gunes);
     addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
-    zemin(); Kasaba.binalar.forEach(bina); alanlarCiz(); engellerCiz(); demiryolu(); tepeler(); sokakSusleri(); serifOdasiCiz();
+    zemin(); Kasaba.binalar.forEach(bina); alanlarCiz(); engellerCiz(); demiryolu(); tepeler(); sokakSusleri(); serifOdasiCiz(); gorevEsyalari();
     return { scene, kamera, renderer };
   }
 
@@ -178,7 +178,7 @@ const Sahne = (() => {
         k(7, 1.1, 0.8, 4, 0.55, -3.2, ahsap); k(7, 1.6, 0.4, 4, 2, -d2 + 0.4, koyu2);                          // bar ve raf
         for (let i = 0; i < 6; i++) k(0.12, 0.35, 0.12, 1.5 + i, 1.3, -3.2, mat(i % 2 ? '#3a7a3a' : '#7a3a20'));
         masa(-2, 2); masa(3, 3); k(1.6, 1.3, 0.6, -5.5, 0.65, -d2 + 0.5, koyu2);                                // masalar, piyano
-        masa(5, -2, KY, yesil); masa(-2, 2, KY); break;                                                         // üst kat kumar masası
+        masa(4.15, -2, KY, yesil); masa(-2, 2, KY); break;                                                         // üst kat kumar masası
       case 'otel':
         k(4, 1.1, 0.8, 3, 0.55, -2, ahsap);                                                                    // resepsiyon
         [[5, -5.5], [5, 3], [-2, -5.5]].forEach(([x, z]) => { k(2.2, 0.5, 1.2, x, KY + 0.25, z, beyaz); k(2.2, 0.8, 0.2, x, KY + 0.4, z - 0.6, ahsap); });
@@ -203,7 +203,7 @@ const Sahne = (() => {
         for (let i = 0; i < 3; i++) k(0.7, 0.8, 0.6, -3 + i * 0.9, 0.4, -d2 + 0.6, mat('#a08a5a'));
         k(2.6, 1, 0.7, 2.5, 0.5, -d2 + 0.6, ahsap); k(0.4, 0.15, 0.4, 2.5, 1.08, -d2 + 0.6, mat('#e8c84a')); break;
       case 'demirci':   // örs ve alet duvarı
-        k(0.9, 0.35, 0.4, -2, 0.85, -1, metal); k(0.4, 0.7, 0.3, -2, 0.35, -1, koyu2); k(4, 1.6, 0.15, 2, 1.6, -d2 + 0.3, koyu2); break;
+        k(0.9, 0.35, 0.4, -2, 0.85, -0.6, metal); k(0.4, 0.7, 0.3, -2, 0.35, -0.6, koyu2); k(0.3, 0.06, 0.25, -1.6, 1.06, -0.6, mat('#ff7a2a', { emissive: '#aa3a00' })); k(4, 1.6, 0.15, 2, 1.6, -d2 + 0.3, koyu2); break;
       case 'kilise':   // sıralar ve kürsü
         for (let i = 0; i < 4; i++) [-1, 1].forEach(sv => k(4, 0.5, 0.6, sv * 3.2, 0.25, 3 - i * 2, ahsap));
         k(2.2, 1.1, 1, 0, 0.55, -d2 + 1.5, beyaz); k(0.6, 0.6, 0.4, 3, 0.3, -d2 + 2.4, mat('#8a6a3a')); break;
@@ -217,6 +217,10 @@ const Sahne = (() => {
           const x = -7 + i * 3.6; k(0.15, 1.4, 3, x - 1.6, 0.7, -d2 + 1.7, ahsap);
           k(0.7, 0.9, 1.8, x, 1.1, -d2 + 1.4, mat(i % 2 ? '#6a4020' : '#3a2a1a')); k(0.4, 0.5, 0.7, x, 1.6, -d2 + 2.5, mat(i % 2 ? '#6a4020' : '#3a2a1a'));
         } break;
+      case 'berber':   // ayna, raf, havlu
+        k(2.4, 1.3, 0.08, 2, 1.6, -d2 + 0.25, mat('#cfe6f0')); k(2.6, 0.12, 0.4, 2, 0.9, -d2 + 0.35, ahsap);
+        for (let i = 0; i < 4; i++) k(0.1, 0.22, 0.1, 1.2 + i * 0.5, 1.07, -d2 + 0.35, mat(['#4a8ab0', '#c94f3d', '#e8d27a', '#2f6a3a'][i]));
+        k(1.6, 1.1, 0.6, -2.5, 0.55, -d2 + 0.5, ahsap); break;
       default:
         if (b.tur === 'ev') { k(2, 0.5, 1.2, -g2 + 1.5, 0.25, -d2 + 1, beyaz); masa(1.5, 0.5); k(1.2, 1.6, 0.5, g2 - 1, 0.8, -d2 + 0.35, ahsap); }
         break;
@@ -252,6 +256,18 @@ const Sahne = (() => {
     [[-0.3, -0.6], [0.3, -0.6], [-0.3, 0.6], [0.3, 0.6]].forEach(([a, c]) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.6, 0.15), mat('#3a2a1a')); l.position.set(a, 0.3, c); g.add(l); });
   }
 
+  // Posta kutusunun üstündeki sayı (yapılan görev adedi)
+  const postaSpritelari = [];
+  function postaDokusu(n) {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d');
+    x.fillStyle = '#f3e2bd'; x.beginPath(); x.arc(64, 64, 58, 0, 7); x.fill();
+    x.lineWidth = 8; x.strokeStyle = '#2a5a9a'; x.stroke();
+    x.fillStyle = '#2a1608'; x.font = 'bold 46px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('📬', 64, 42); x.font = 'bold 44px Georgia, serif'; x.fillText(String(n), 64, 92);
+    return new THREE.CanvasTexture(c);
+  }
+  function postaSayisi(n) { postaSpritelari.forEach(s => { s.material.map?.dispose(); s.material.map = postaDokusu(n); s.material.needsUpdate = true; }); }
   function engellerCiz() {
     Kasaba.engeller.forEach(e => {
       const g = new THREE.Group(); g.position.set(e.x, 0, e.z); scene.add(g);
@@ -260,6 +276,13 @@ const Sahne = (() => {
         ekle(new THREE.CylinderGeometry(1.4, 1.4, 0.9, 14), mat('#8f8a80'), 0.45);
         ekle(new THREE.BoxGeometry(0.2, 2.4, 0.2), mat('#5a3a20'), 1.2, -1.2); ekle(new THREE.BoxGeometry(0.2, 2.4, 0.2), mat('#5a3a20'), 1.2, 1.2);
         const c = ekle(new THREE.ConeGeometry(1.8, 0.9, 4), mat('#7a3a28'), 2.7); c.rotation.y = Math.PI / 4;
+      } else if (e.tur === 'posta') {   // posta kutusu: direk üstünde mavi kutu, üstünde sayı tabelası
+        ekle(new THREE.BoxGeometry(0.12, 1.1, 0.12), mat('#4a3020'), 0.55);
+        ekle(new THREE.BoxGeometry(0.6, 0.45, 0.45), mat('#2a5a9a'), 1.32);
+        ekle(new THREE.CylinderGeometry(0.225, 0.225, 0.6, 12, 1, false, 0, Math.PI), mat('#2a5a9a'), 1.545).rotation.z = Math.PI / 2;
+        ekle(new THREE.BoxGeometry(0.05, 0.2, 0.05), mat('#c92a2a'), 1.6, 0.33);
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: postaDokusu(0), depthTest: true, transparent: true }));
+        sp.scale.set(0.9, 0.9, 1); sp.position.y = 2.35; g.add(sp); postaSpritelari.push(sp);
       } else if (e.tur === 'fici') { ekle(new THREE.CylinderGeometry(0.5, 0.5, 1.1, 10), mat('#7a4a22'), 0.55); }
       else if (e.tur === 'saman') { const s = ekle(new THREE.CylinderGeometry(1, 1, 1.4, 12), mat('#e2c46b'), 1); s.rotation.z = Math.PI / 2; }
       else if (e.tur === 'yalak') { ekle(new THREE.BoxGeometry(2, 0.6, 0.9), mat('#6b4428'), 0.3); ekle(new THREE.BoxGeometry(1.8, 0.05, 0.7), mat('#4a8ab0'), 0.58); }
@@ -337,6 +360,7 @@ const Sahne = (() => {
     };
     [...Kasaba.binalar.filter(b => b.tur !== 'ev'), ...Kasaba.alanlar].forEach(b => etiket(b.emoji, b.ad, b.x, b.z));
     etiket('🚪', 'Şerif odası', so.x, so.z);
+    x.font = `${Math.round(ef * 0.8)}px sans-serif`; x.fillStyle = '#fff'; Kasaba.postaKutulari.forEach(p => x.fillText('📬', P(p.x), P(p.z)));
     return c;
   }
 
@@ -365,5 +389,27 @@ const Sahne = (() => {
   }
   function kapiCanlandir(dt) { if (kapiGrup) kapiGrup.rotation.y += (kapiHedef - kapiGrup.rotation.y) * Math.min(1, dt * 3); }
 
-  return { kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
+  // ---------- Görev eşyaları: sandalyeler, berber koltuğu ve ustası, berber direği ----------
+  let usta = null;
+  function gorevEsyalari() {
+    Kasaba.gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar').forEach(g => {
+      const berber = g.anim === 'otur';
+      const grp = new THREE.Group(); grp.position.set(g.x, g.y, g.z); grp.rotation.y = g.yon; scene.add(grp);
+      const kol = mat(berber ? '#8a1a1a' : '#6a4424'), ayak = mat(berber ? '#c9c9d2' : '#4a3020');
+      const e = (w, h, d, x, y, z, m) => { const k = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); k.position.set(x, y, z); grp.add(k); };
+      e(0.56, 0.1, 0.56, 0, 0.44, 0, kol);                       // oturak
+      e(0.56, berber ? 0.85 : 0.6, 0.1, 0, berber ? 0.88 : 0.75, -0.28, kol);   // sırtlık (arkada)
+      if (berber) { e(0.08, 0.1, 0.5, 0.3, 0.68, 0, kol); e(0.08, 0.1, 0.5, -0.3, 0.68, 0, kol); e(0.2, 0.4, 0.2, 0, 0.2, 0, ayak); e(0.5, 0.05, 0.5, 0, 0.02, 0, ayak); e(0.4, 0.06, 0.2, 0, 0.12, 0.42, ayak); }
+      else [[-0.24, -0.24], [0.24, -0.24], [-0.24, 0.24], [0.24, 0.24]].forEach(([a, c]) => e(0.06, 0.44, 0.06, a, 0.22, c, ayak));
+    });
+    // Berber ustası (koltuğun arkasında, müşteri oturunca tıraş eder)
+    const u = Kasaba.berberUsta;
+    usta = Karakter.yap(1); usta.position.set(u.x, 0, u.z); usta.rotation.y = u.yon; scene.add(usta);
+    // Dükkânın önünde kırmızı-beyaz berber direği
+    const b = Kasaba.binaBul('berber'), d = Kasaba.dunya(b, 2.6, b.d / 2 + 0.5);
+    const direk = new THREE.Group(); direk.position.set(d.x, 0, d.z); scene.add(direk);
+    for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 10), mat(i % 2 ? '#c92a2a' : '#f2f2f2')); m.position.y = 1.2 + i * 0.2; direk.add(m); }
+  }
+
+  return { get berberUstasi() { return usta; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
 })();

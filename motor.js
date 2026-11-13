@@ -46,6 +46,7 @@ const Motor = (() => {
       varliklar: new Map(), oyuncular: [], yapilan: new Set(), gorevSayi: 0, bekleyen: [],
       sonrakiNo: toplam, sonSes: 0, yeniKasabali: [],
       serifCikis: Date.now() + BEKLEME * 1000, kapiAcildi: false,
+      tamamlanan: [], postaSayi: -1, sonPosta: 0,   // posta kutuları için: [{ gid, t }]
     };
     Kasaba.odaKapisi(true);
     oyuncular.forEach((p, i) => {
@@ -88,15 +89,16 @@ const Motor = (() => {
     switch (m.tip) {
       case 'konum':
         if (!canlimi(p) || !v) return;
-        v.x = +m.x || 0; v.z = +m.z || 0; v.y = Math.max(0, Math.min(Kasaba.KAT_Y, +m.y || 0)); v.yaw = +m.yaw || 0; v.h = Math.max(0, Math.min(3, m.h | 0));
+        v.x = +m.x || 0; v.z = +m.z || 0; v.y = Math.max(0, Math.min(Kasaba.KAT_Y, +m.y || 0)); v.yaw = +m.yaw || 0; v.h = Math.max(0, Math.min(10 + Kasaba.ANIMLER.length - 1, m.h | 0));
         v.nisan = p.rol === 'serif' && typeof m.n === 'number' ? Math.max(-1.3, Math.min(1.2, m.n)) : null;   // şerifin lazerli nişanı (bakış açısı)
-        if (p.is && Math.hypot(v.x - p.is.x, v.z - p.is.z) > 0.9) isIptal(p);
+        if (p.is && Math.hypot(v.x - p.is.x, v.z - p.is.z) > (p.is.r || 0.9)) isIptal(p);
         break;
       case 'gorev': {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is) return;
         const g = Kasaba.gorevler.find(x => x.id === m.gid);
-        if (!g || o.yapilan.has(g.id) || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5) return;
-        p.is = { tur: 'gorev', gid: g.id, bitis: Date.now() + g.sure * 1000, x: v.x, z: v.z };
+        if (!g || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5) return;
+        if (o.yapilan.has(g.id)) { cb.kisiye(id, { tip: 'is', iptal: true, yapilmis: g.id }); return; }
+        p.is = { tur: 'gorev', gid: g.id, bitis: Date.now() + g.sure * 1000, x: g.x, z: g.z, r: 3.2 };   // oyuncu görev yerine yerleşir (yürürse iptal)
         cb.kisiye(id, { tip: 'is', ad: g.ad, sure: g.sure });
         break;
       }
@@ -104,11 +106,17 @@ const Motor = (() => {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is || p.kilik <= 0) return;
         const k = Kasaba.kiliklar.find(x => x.id === m.kid);
         if (!k || Math.hypot(v.x - k.x, v.z - k.z) > 2.8) return;
-        p.is = { tur: 'kilik', kid: k.id, bitis: Date.now() + 3000, x: v.x, z: v.z };
+        p.is = { tur: 'kilik', kid: k.id, bitis: Date.now() + 3000, x: k.x, z: k.z, r: 3.2 };
         cb.kisiye(id, { tip: 'is', ad: 'Kılık değiştiriliyor', sure: 3 });
         break;
       }
       case 'iptal': if (p.is) isIptal(p); break;
+      case 'posta': {   // şerif posta kutusuna baktı: en az 10 sn önce yapılmış görevleri öğrenir
+        if (!canlimi(p) || p.rol !== 'serif' || !v) return;
+        if (!Kasaba.postaKutulari.some(k => Math.hypot(k.x - v.x, k.z - v.z) < 3)) return;
+        cb.kisiye(id, { tip: 'postaListe', ids: postaBilgisi() });
+        break;
+      }
       case 'ates': ates(p, v, m.hedef); break;
       case 'muhbir':
         if (!canlimi(p) || p.rol !== 'serif' || p.muhbir <= 0) return;
@@ -174,14 +182,14 @@ const Motor = (() => {
       return;
     }
     if (v.bekle > 0) {
-      v.bekle -= dt; v.h = v.calisiyor ? 3 : 0;   // görev yerinde elleriyle iş yapıyormuş gibi
+      v.bekle -= dt; v.h = v.calisiyor ? Kasaba.animKodu(v.calismaAnim) : 0;   // görev yerinde o göreve özel hareketi yapar
       if (v.bakis !== null) v.yaw = donus(v.yaw, v.bakis, dt * 2.2, dt * 2);
       return;
     }
     if (!v.yol || !v.yol.length) {
       const u = sec(Kasaba.ugraklar);
       v.hedef = u;
-      const oyna = u.bina ? 0.3 : 0.8;   // bina içinde hedefe daha tam git
+      const oyna = u.gorev ? 0.05 : u.bina ? 0.3 : 0.8;   // görev yerine tam otursun/dursun (sandalye, örs…)
       v.yol = Kasaba.yol(v.x, v.z, u.x + rnd(-oyna, oyna), u.z + rnd(-oyna, oyna), v.y, u.kat, u.bina);
       v.ilerleme = { t: 0, x: v.x, z: v.z };
       return;
@@ -191,7 +199,7 @@ const Motor = (() => {
     // Köşeleri keskin dönmesin: ara noktaya yaklaşınca bir sonrakine yönelir (köşeyi yuvarlar)
     if (d < (sonNokta || n.tam ? 0.3 : 1.4)) {
       v.yol.shift();
-      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = !!v.hedef?.gorev && Math.random() < 0.8; }
+      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = !!v.hedef?.gorev && Math.random() < 0.85; v.calismaAnim = v.hedef?.anim || 'calis'; }
       return;
     }
     // Ara sıra caddede durup etrafa bakar
@@ -257,6 +265,12 @@ const Motor = (() => {
     o.varliklar.forEach(x => v.push(x.no, Math.round(x.x * 10), Math.round(x.z * 10), Math.round(x.yaw * 100), x.h, x.tip, x.durum, Math.round((x.y || 0) * 10), x.nisan == null || x.durum ? 0 : Math.round((x.nisan + 3) * 100)));
     cb.herkese({ tip: 'd', k: Math.max(0, Math.round((o.bitis - simdi) / 1000)), v });
     if (simdi - o.sonSes > 300) { o.sonSes = simdi; sesTablosu(); }
+    // Posta kutularındaki sayı: 10 sn önceye kadar yapılmış görevler
+    if (simdi - o.sonPosta > 1000) {
+      o.sonPosta = simdi;
+      const n = postaBilgisi().length;
+      if (n !== o.postaSayi) { o.postaSayi = n; cb.herkese({ tip: 'posta', n }); }
+    }
     kontrol();
   }
   function kenardanYer() {
@@ -268,7 +282,7 @@ const Motor = (() => {
   function gorevBitti(p, gid, simdi) {
     if (o.yapilan.has(gid)) { cb.kisiye(p.id, { tip: 'is', iptal: true }); return; }
     const g = Kasaba.gorevler.find(x => x.id === gid);
-    o.yapilan.add(gid); o.gorevSayi++;
+    o.yapilan.add(gid); o.gorevSayi++; o.tamamlanan.push({ gid, t: simdi });
     cb.kisiye(p.id, { tip: 'is', bitti: true });
     const metin = `${g.emoji} ${g.olay}`;
     o.oyuncular.forEach(q => {
@@ -291,6 +305,9 @@ const Motor = (() => {
       o.bekleyen.push({ zaman: simdi + rnd(10000, 14000), id: q.id, mesaj: { tip: 'bildirim', metin: `👔 ${k.ad} önünde biri kılık değiştirdi`, gid: 'kilik:' + kid, olayZamani: simdi } });
     });
   }
+
+  const POSTA_GECIKME = 10000;
+  function postaBilgisi() { const sinir = Date.now() - POSTA_GECIKME; return o.tamamlanan.filter(k => k.t <= sinir).map(k => k.gid); }
 
   // Kim kimi ne kadar duyar? (0..1)
   function sesTablosu() {

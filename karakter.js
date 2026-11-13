@@ -77,6 +77,16 @@ const Karakter = (() => {
     const kolL = kol(1), kolR = kol(-1);
     if (t.baston) { const b = parca(silindir(0.025, 0.025, 0.9, 6), '#5a3a1a', 0, -0.64, 0.06, kolR.userData.dirsek); b.rotation.x = 0.1; }
     if (serif) tabancaEkle(kolR.userData.dirsek);
+    // Görev eşyaları (sadece görevde görünür): çekiç ve zehir şişesi
+    let cekic = null, sise = null;
+    if (!serif) {
+      const d = kolR.userData.dirsek;
+      cekic = new THREE.Group(); cekic.position.set(0, -0.34, 0.02); d.add(cekic);
+      parca(kutu(0.04, 0.04, 0.38), '#6a4424', 0, 0, 0.14, cekic); parca(kutu(0.1, 0.09, 0.18), '#4a4a52', 0, 0, 0.33, cekic);
+      sise = new THREE.Group(); sise.position.set(0, -0.36, 0.05); d.add(sise);
+      parca(silindir(0.065, 0.065, 0.26, 8), '#2f8a3a', 0, -0.08, 0, sise); parca(silindir(0.025, 0.03, 0.1, 6), '#2f8a3a', 0, -0.26, 0, sise); parca(kutu(0.1, 0.06, 0.02), '#f2f2f2', 0, -0.06, 0.066, sise);
+      cekic.visible = sise.visible = false;
+    }
     // Baş
     const bas = new THREE.Group(); bas.position.set(0, 1.72, 0); govdeG.add(bas);
     parca(kutu(0.3, 0.32, 0.3), t.ten, 0, 0, 0, bas);
@@ -107,7 +117,7 @@ const Karakter = (() => {
     }
     const boy = t.boy || 1;
     g.scale.set(1, boy, 1);
-    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0 };
+    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0, cekic, sise };
     return g;
   }
 
@@ -150,6 +160,8 @@ const Karakter = (() => {
     const yum = (a, b, k = 12) => a + (b - a) * Math.min(1, dt * k);
     const dizL = u.bacakL.userData.diz, dizR = u.bacakR.userData.diz;
     const dirL = u.kolL.userData.dirsek, dirR = u.kolR.userData.dirsek;
+    if (u.cekic) { u.cekic.visible = h === 10 + ANIMLER.indexOf('dov'); u.sise.visible = h === 10 + ANIMLER.indexOf('dok'); }
+    if (h >= 10) { gorevPozu(u, ANIMLER[h - 10] || 'calis', dt, yum, dizL, dizR, dirL, dirR); return; }
     if (h === 3) {   // görev yapıyor: kollar önde, dirsekler bükük, elleri bir şeyle uğraşıyor
       u.faz += dt * 9;
       u.bacakL.rotation.x = yum(u.bacakL.rotation.x, 0, 10); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, 0, 10);
@@ -170,7 +182,8 @@ const Karakter = (() => {
     // (kalça açısı + = bacak geride; sol için öne savrulma cos<0 anında olur)
     const dizHedefL = hiz ? K * Math.max(0, -cs) + (kos ? 0.35 * Math.max(0, sn) : 0.06) : 0;
     const dizHedefR = hiz ? K * Math.max(0, cs) + (kos ? 0.35 * Math.max(0, -sn) : 0.06) : 0;
-    u.bacakL.rotation.x = yum(u.bacakL.rotation.x, kalcaL, 16); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, kalcaR, 16);
+    const egim = kos ? 0.22 : hiz ? 0.04 : 0;
+    u.bacakL.rotation.x = yum(u.bacakL.rotation.x, kalcaL - egim, 16); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, kalcaR - egim, 16);
     dizL.rotation.x = yum(dizL.rotation.x, dizHedefL, 18); dizR.rotation.x = yum(dizR.rotation.x, dizHedefR, 18);
     // Kollar bacaklara ters sallanır; dirsek yürürken hafif, koşarken çok bükük
     const kolA = kos ? 0.9 : 0.45, dirsek = kos ? -1.35 : hiz ? -0.28 : -0.1;
@@ -191,7 +204,57 @@ const Karakter = (() => {
     u.govdeG.position.y = yum(u.govdeG.position.y, zipla, 20);
     u.govdeG.rotation.x = yum(u.govdeG.rotation.x, kos ? 0.22 : hiz ? 0.04 : 0);
     u.govdeG.rotation.y = yum(u.govdeG.rotation.y, hiz ? sn * (kos ? 0.1 : 0.05) : 0);
+    dirR.rotation.y = yum(dirR.rotation.y, 0);
   }
+
+  // ---------- Göreve özel hareketler ----------
+  // Ağdaki "h" değeri: 10 + bu listedeki sıra. Oyuncu da bot da aynı listeyi kullanır.
+  const ANIMLER = Kasaba.ANIMLER;   // liste kasaba.js'te (motor da kullanır)
+  function gorevPozu(u, anim, dt, yum, dizL, dizR, dirL, dirR) {
+    u.faz += dt * 6;
+    const f = u.faz, sn = Math.sin(f), cs = Math.cos(f);
+    // Varsayılan: dik duruş
+    const p = { kL: 0, kR: 0, dL: 0.06, dR: 0.06, oL: -0.1, oR: -0.1, eL: -0.15, eR: -0.15, gx: 0, gy: 0, sR: 0 };
+    switch (anim) {
+      case 'ara':      // eğilip raflarda/çekmecede arar
+        Object.assign(p, { gx: 0.45, kL: -0.25, kR: -0.25, dL: 0.4, dR: 0.4, oL: -0.7 + sn * 0.3, oR: -0.7 - sn * 0.3, eL: -0.6 + cs * 0.3, eR: -0.6 - cs * 0.3, gy: -0.04 }); break;
+      case 'cevir':    // kasanın şifre çarkını çevirir, kulağını dayar
+        Object.assign(p, { gx: 0.2, oL: -1.0, eL: -0.9, oR: -1.15, eR: -0.55 + sn * 0.25, sR: sn * 0.4 }); break;
+      case 'uzan':     // yukarıdaki çividen/kancadan bir şey almaya uzanır
+        Object.assign(p, { gx: -0.12, oR: -2.7 + sn * 0.12, eR: -0.15, oL: -0.3, eL: -0.3 }); break;
+      case 'yirt':     // afişi iki eliyle yırtar
+        Object.assign(p, { oL: -1.75 + sn * 0.2, oR: -1.75 - sn * 0.2, eL: -0.9 - Math.max(0, sn) * 0.5, eR: -0.9 - Math.max(0, -sn) * 0.5, gx: 0.05 }); break;
+      case 'kes':      // telgraf telini kollar havada keser
+        Object.assign(p, { oL: -2.5, oR: -2.5 + Math.abs(sn) * 0.2, eL: -0.5, eR: -0.5 - Math.abs(sn) * 0.4, gx: -0.1 }); break;
+      case 'dov': {    // çekici kaldırıp örse indirir
+        const d = (f * 0.5) % 1, kalk = d < 0.7 ? d / 0.7 : 1 - (d - 0.7) / 0.3;   // yavaş kalkar, hızla iner
+        Object.assign(p, { gx: 0.2 + (1 - kalk) * 0.12, oR: -0.6 - kalk * 2.2, eR: -0.2 - kalk * 0.6, oL: -0.8, eL: -0.6, kL: -0.15, dL: 0.25, dR: 0.15 });
+        break;
+      }
+      case 'dok':      // şişeyi eğip zehri döker
+        Object.assign(p, { gx: 0.35, oR: -1.25 + sn * 0.08, eR: -0.35, oL: -1.0, eL: -0.9, kL: -0.2, kR: -0.2, dL: 0.3, dR: 0.3, sR: 0 }); break;
+      case 'cok':      // çömelip bir şey koyar / kibrit çakar
+        Object.assign(p, { kL: -1.25, kR: -1.05, dL: 2.05, dR: 1.9, gy: -0.42, gx: 0.45, oR: -0.9 + Math.max(0, sn) * 0.6, eR: -0.4, oL: -0.6, eL: -0.6 }); break;
+      case 'otur':     // sandalyede/berber koltuğunda oturur, eller dizde
+        Object.assign(p, { kL: -1.5, kR: -1.5, dL: 1.5, dR: 1.5, gy: -0.4, gx: -0.05, oL: -0.55, oR: -0.55, eL: -0.9, eR: -0.9 }); break;
+      case 'kumar':    // masada oturup kâğıt oynar
+        Object.assign(p, { kL: -1.5, kR: -1.5, dL: 1.5, dR: 1.5, gy: -0.4, gx: 0.15, oL: -0.85, oR: -0.85 + Math.max(0, sn) * 0.35, eL: -1.0, eR: -0.9 - Math.max(0, sn) * 0.3 }); break;
+      case 'tras':     // berber: usturayla tıraş eder
+        Object.assign(p, { gx: 0.25, oR: -1.35 + sn * 0.12, eR: -0.7 + cs * 0.25, oL: -1.2, eL: -0.8 }); break;
+      default:         // genel çalışma
+        Object.assign(p, { gx: 0.12, oL: -0.75 + sn * 0.25, oR: -0.75 - sn * 0.25, eL: -0.7 + cs * 0.25, eR: -0.7 - cs * 0.25 });
+    }
+    // Gövde öne eğilince bacaklar dik kalsın (eğilme belden olsun): kalça açısından eğimi çıkar
+    u.bacakL.rotation.x = yum(u.bacakL.rotation.x, p.kL - p.gx, 10); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, p.kR - p.gx, 10);
+    dizL.rotation.x = yum(dizL.rotation.x, p.dL, 10); dizR.rotation.x = yum(dizR.rotation.x, p.dR, 10);
+    u.kolL.rotation.x = yum(u.kolL.rotation.x, p.oL, 12); dirL.rotation.x = yum(dirL.rotation.x, p.eL, 12);
+    if (!u.serif) { u.kolR.rotation.x = yum(u.kolR.rotation.x, p.oR, anim === 'dov' ? 20 : 12); dirR.rotation.x = yum(dirR.rotation.x, p.eR, 12); dirR.rotation.y = yum(dirR.rotation.y, p.sR, 12); }
+    u.govdeG.rotation.x = yum(u.govdeG.rotation.x, p.gx, 10); u.govdeG.position.y = yum(u.govdeG.position.y, p.gy, 10);
+    u.govdeG.rotation.y = yum(u.govdeG.rotation.y, 0, 10);
+    if (u.sise) u.sise.rotation.x = anim === 'dok' ? 1.9 + Math.sin(f * 0.7) * 0.25 : 0;   // şişe ağzı aşağı
+  }
+  // Bu görev hareketinin ağ kodu
+  const animKodu = Kasaba.animKodu;
 
   // Takım çizgisi: vücudu saran renkli kenar + duvar arkasındayken görünen gölge
   function cizgiEkle(g, renk) {
@@ -217,5 +280,5 @@ const Karakter = (() => {
   // Birinci şahıs görünümde kendi kafanı gizle
   function basGizle(g, gizli) { g.userData.bas.visible = !gizli; }
 
-  return { TIPLER, SERIF_TIP, yap, canlandir, cizgiEkle, cizgiKaldir, basGizle, elTabancasi, atesEt };
+  return { TIPLER, SERIF_TIP, ANIMLER, animKodu, yap, canlandir, cizgiEkle, cizgiKaldir, basGizle, elTabancasi, atesEt };
 })();

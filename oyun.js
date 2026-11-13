@@ -209,7 +209,7 @@
       akisEkle(`🦹 Haydutsun. Sarı işaretli görevleri yap, kalabalığa karış. Hedef: ${m.ayar.hedef} görev.`, 'takim');
     } else {
       toast(`⭐ ŞERİFSİN!<br><small>${m.haydutSayisi} haydut kalabalığın içinde saklanıyor</small>`, 4500);
-      akisEkle(`⭐ Şerifsin. Görev bildirimleri en az 10 sn gecikmeli gelir. ${m.ayar.hak} atış hakkın var.`, 'iyi');
+      akisEkle(`⭐ Şerifsin. Görev yapılınca sana haber gelmez: 📬 posta kutularının zilini dinle, kutuya bakıp öğren. ${m.ayar.hak} atış hakkın var.`, 'iyi');
     }
     Ses.bildirim();
   }
@@ -301,6 +301,8 @@
     if (e.code === 'KeyF' && oyun.rol === 'serif') ates();
     if (e.code === 'KeyK') mikDegistir();
     if (e.code === 'KeyQ') nisanDegistir();
+    if (!oyun.canli && e.code === 'Space' && !oyun.serbest) { e.preventDefault(); izlemeDegistir(1); }
+    if (!oyun.canli && e.code === 'KeyG') { oyun.serbest = !oyun.serbest; if (oyun.serbest) oyun.ruhY = oyun.y + 1.7; else oyun.izle = 0; izlemeYazisi(); }
     if (e.code === 'KeyL') $('gorevListe').classList.toggle('gizli');
     // Alt: fareyi serbest bırak (mikrofon vb. tuşlara tıklamak için). ESC de aynı işi yapar.
     if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); if (document.pointerLockElement) document.exitPointerLock(); }
@@ -422,9 +424,9 @@
   function isDurumu(m) {
     if (m.ad) {
       oyun.is = { ad: m.ad, sure: m.sure, bas: performance.now(), anim: oyun.sonAnim || 'calis' };
-      // Görev yerine tam yerleş ve o yöne dön (sandalyeye otur, örsün başına geç…)
+      // Işınlanma yok: görevi durduğun yerden yaparsın. Sadece sandalyeli görevlerde sandalyeye kısa sürede kayarak oturursun.
       const n = oyun.sonEylem;
-      if (n) { oyun.x = n.x; oyun.z = n.z; oyun.govdeYaw = n.yon ?? oyun.govdeYaw; }
+      oyun.is.kay = n && (oyun.sonAnim === 'otur' || oyun.sonAnim === 'kumar') ? { x: n.x, z: n.z } : null;
       $('ilerleme').classList.remove('gizli'); $('ilerlemeYazi').textContent = m.ad; Ses.is();
     }
     else {
@@ -454,7 +456,7 @@
       if (t - +d.dataset.eklendi > 90000) d.remove();
     });
   }
-  setInterval(zamanlariGuncelle, 1000);
+  setInterval(() => { zamanlariGuncelle(); if (oyun && !oyun.canli) izlemeYazisi(); }, 1000);
   function bildirim(m) {
     if (m.sayi && oyun.rol === 'haydut') oyun.gorevSayi = Math.max(oyun.gorevSayi, m.sayi);
     if (m.gid && !String(m.gid).startsWith('kilik:')) oyun.yapilan.add(m.gid);
@@ -566,11 +568,36 @@
     oyun.canli = false; oyun.is = null; $('ilerleme').classList.add('gizli');
     oyun.kamera = 'arka';
     const yazi = m.neden === 'hapis' ? '⛓️ Hapse girdin! Masum kasabalıları vurdun.' : `💀 Vuruldun! (${kacis(m.kim || 'şerif')})`;
-    $('elendiYazi').innerHTML = `${yazi}<br><small>Artık hayalet olarak kasabayı izliyorsun. Ölüler sadece ölüleri duyar.</small>`;
+    oyun.elenmeYazi = yazi; oyun.izle = 0; oyun.serbest = oyun.rol === 'haydut'; oyun.ruhY = oyun.y + 1.7;
+    izlemeYazisi();
     $('elendiYazi').classList.remove('gizli');
     if (m.neden === 'hapis') Ses.hapis(); else Ses.kaybetti();
     hudGuncelle();
   }
+  // Elenen oyuncu: ayakta kalan takım arkadaşlarının gözünden izler (Boşluk/dokun: sıradaki, G: serbest hayalet)
+  function izlenebilenler() {
+    return [...oyun.takim].filter(no => no !== oyun.benimNo && varliklar.get(no)?.durum === 0);
+  }
+  function izlenen() {
+    if (!oyun || oyun.canli || oyun.serbest) return null;
+    const l = izlenebilenler(); if (!l.length) return null;
+    oyun.izle = ((oyun.izle % l.length) + l.length) % l.length;
+    return l[oyun.izle];
+  }
+  function izlenenAd(no) {
+    const i = (oyun.rol === 'serif' ? [...oyun.serifler] : [...oyun.takim]).indexOf(no);
+    return (oyun.takimAdlar || [])[i] || 'arkadaşın';
+  }
+  function izlemeYazisi() {
+    if (!oyun || oyun.canli) return;
+    const no = izlenen();
+    const alt = no != null
+      ? `👁️ <b>${kacis(izlenenAd(no))}</b> gözünden izliyorsun · ${dokun ? 'dokun: sıradaki' : 'Boşluk: sıradaki · G: serbest dolaş'}`
+      : `👻 Ruh oldun: kimse seni görmez, istediğin yere uç${dokun ? '' : ' · WASD + fare · Boşluk yukarı · C aşağı · Shift hızlı'}${izlenebilenler().length && !dokun ? ' · G: arkadaşının gözünden izle' : ''}`;
+    $('elendiYazi').innerHTML = `${oyun.elenmeYazi}<br><small>${alt}<br>Ölüler sadece ölüleri duyar.</small>`;
+  }
+  function izlemeDegistir(adim) { if (!oyun || oyun.canli) return; oyun.serbest = false; oyun.izle += adim; izlemeYazisi(); }
+  $('elendiYazi').addEventListener('click', () => izlemeDegistir(1));
   function bitti(m) {
     const benimRol = oyun.rol, kazandim = m.kazanan === benimRol;
     if (kazandim) Ses.kazandi(); else Ses.kaybetti();
@@ -678,6 +705,7 @@
     if (!oyun.kapiAcik && t > oyun.kapiAcilis + 2000) kapiAcildi();   // evden haber gelmezse yine de aç
     Sahne.kapiCanlandir(dt);
     hareket(dt);
+    const izleNo = izlenen();
     varliklar.forEach((v, no) => {
       if (no === oyun.benimNo) { v.x = oyun.x; v.z = oyun.z; v.y = oyun.y; v.yaw = oyun.govdeYaw; }
       else {
@@ -687,7 +715,7 @@
         let f = ((v.tyaw - v.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; v.yaw += f * k;
       }
       v.g.position.set(v.x, v.y, v.z); v.g.rotation.y = v.yaw;
-      v.g.visible = !(no === oyun.benimNo && (!oyun.canli || oyun.kamera === 'goz'));
+      v.g.visible = !(no === oyun.benimNo && (!oyun.canli || oyun.kamera === 'goz')) && no !== izleNo;
       Karakter.canlandir(v.g, no === oyun.benimNo ? oyun.h : v.h, dt);
     });
     kameraAyarla();
@@ -721,6 +749,7 @@
   }
 
   function hareket(dt) {
+    if (!oyun.canli && oyun.serbest) { ruhUcusu(dt); return; }
     let ileri = 0, yan = 0;
     if (tuslar.has('KeyW') || tuslar.has('ArrowUp')) ileri += 1;
     if (tuslar.has('KeyS') || tuslar.has('ArrowDown')) ileri -= 1;
@@ -744,7 +773,19 @@
       let f = ((hedefYaw - oyun.govdeYaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
       oyun.govdeYaw += f * Math.min(1, dt * 10);
     } else if (oyun.kamera === 'goz' || oyun.nisan) oyun.govdeYaw = oyun.yaw;   // nişan alırken gövde baktığın yöne döner
-    if (oyun.is && oyun.h === 0) { oyun.h = Kasaba.animKodu(oyun.is.anim); if (oyun.kamera !== 'goz' && oyun.sonEylem) oyun.govdeYaw = oyun.sonEylem.yon ?? oyun.govdeYaw; }   // göreve özel hareket (botlarla aynı)
+    if (oyun.is && oyun.h === 0) {   // göreve özel hareket (botlarla aynı)
+      oyun.h = Kasaba.animKodu(oyun.is.anim);
+      const n = oyun.sonEylem;
+      if (n) {
+        // görev yerine doğru yavaşça dön (sandalyede sandalyenin yönüne)
+        const hedef = oyun.is.kay ? (n.yon ?? oyun.govdeYaw) : Math.atan2(n.x - oyun.x, n.z - oyun.z);
+        if (Math.hypot(n.x - oyun.x, n.z - oyun.z) > 0.3 || oyun.is.kay) {
+          const f = ((hedef - oyun.govdeYaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+          oyun.govdeYaw += f * Math.min(1, dt * 6);
+        }
+        if (oyun.is.kay) { oyun.x += (oyun.is.kay.x - oyun.x) * Math.min(1, dt * 8); oyun.z += (oyun.is.kay.z - oyun.z) * Math.min(1, dt * 8); }
+      }
+    }
     const t = performance.now();
     if (oyun.canli && t - oyun.sonGonder > 66) {
       oyun.sonGonder = t;
@@ -752,8 +793,42 @@
     }
   }
 
+  // Ölen oyuncu ruh olarak uçar: baktığı yöne gider, duvarlardan geçer, kimse görmez
+  function ruhUcusu(dt) {
+    let ileri = 0, yan = 0, dik = 0;
+    if (tuslar.has('KeyW') || tuslar.has('ArrowUp')) ileri += 1;
+    if (tuslar.has('KeyS') || tuslar.has('ArrowDown')) ileri -= 1;
+    if (tuslar.has('KeyD') || tuslar.has('ArrowRight')) yan += 1;
+    if (tuslar.has('KeyA') || tuslar.has('ArrowLeft')) yan -= 1;
+    if (tuslar.has('Space')) dik += 1;
+    if (tuslar.has('KeyC')) dik -= 1;
+    if (joy.id !== null) { ileri -= joy.y; yan += joy.x; }
+    const hiz = (tuslar.has('ShiftLeft') || tuslar.has('ShiftRight') || oyun.kos ? 16 : 7) * dt;
+    const cp = Math.cos(oyun.pitch), s = Math.sin(oyun.yaw), c = Math.cos(oyun.yaw);
+    oyun.x += (s * cp * ileri - c * yan) * hiz;
+    oyun.z += (c * cp * ileri + s * yan) * hiz;
+    oyun.ruhY = (oyun.ruhY ?? oyun.y + 1.7) + (Math.sin(oyun.pitch) * ileri + dik) * hiz;
+    oyun.x = Math.max(-115, Math.min(115, oyun.x)); oyun.z = Math.max(-115, Math.min(115, oyun.z));
+    oyun.ruhY = Math.max(0.4, Math.min(70, oyun.ruhY));
+    oyun.h = 0;
+  }
   function kameraAyarla() {
     const k = Sahne.kamera;
+    if (!oyun.canli && oyun.serbest) {   // ruh: gözünden uçuş
+      const cp = Math.cos(oyun.pitch), dd = new THREE.Vector3(Math.sin(oyun.yaw) * cp, Math.sin(oyun.pitch), Math.cos(oyun.yaw) * cp);
+      k.position.set(oyun.x, oyun.ruhY ?? oyun.y + 1.7, oyun.z);
+      k.lookAt(k.position.x + dd.x, k.position.y + dd.y, k.position.z + dd.z);
+      return;
+    }
+    // Elenmiş: takım arkadaşının gözünden bak
+    const izNo = izlenen(), iv = izNo != null ? varliklar.get(izNo) : null;
+    if (iv) {
+      const p = iv.nisan ?? -0.04, cp = Math.cos(p), dd = new THREE.Vector3(Math.sin(iv.yaw) * cp, Math.sin(p), Math.cos(iv.yaw) * cp);
+      k.position.set(iv.x + Math.sin(iv.yaw) * 0.2, iv.y + 1.62 * iv.g.scale.y, iv.z + Math.cos(iv.yaw) * 0.2);
+      k.lookAt(k.position.x + dd.x, k.position.y + dd.y, k.position.z + dd.z);
+      oyun.x = iv.x; oyun.z = iv.z; oyun.y = iv.y;   // harita da onu göstersin
+      return;
+    }
     const cp = Math.cos(oyun.pitch), d = new THREE.Vector3(Math.sin(oyun.yaw) * cp, Math.sin(oyun.pitch), Math.cos(oyun.yaw) * cp);
     const v = varliklar.get(oyun.benimNo);
     const boy = v ? v.g.scale.y : 1;

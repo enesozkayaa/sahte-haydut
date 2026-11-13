@@ -332,7 +332,7 @@ const Sahne = (() => {
   // ---------- Görev eşyaları: sandalyeler, berber koltuğu ve ustası, berber direği ----------
   let usta = null;
   function gorevEsyalari() {
-    Kasaba.gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar').forEach(g => {
+    Kasaba.gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye').forEach(g => {
       const berber = g.anim === 'otur';
       const grp = new THREE.Group(); grp.position.set(g.x, g.y, g.z); grp.rotation.y = g.yon; scene.add(grp);
       const kol = mat(berber ? '#8a1a1a' : '#6a4424'), ayak = mat(berber ? '#c9c9d2' : '#4a3020');

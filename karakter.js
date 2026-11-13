@@ -239,6 +239,15 @@ const Karakter = (() => {
         Object.assign(p, { kL: -1.5, kR: -1.5, dL: 1.5, dR: 1.5, gy: -0.4, gx: -0.05, oL: -0.55, oR: -0.55, eL: -0.9, eR: -0.9 }); break;
       case 'kumar':    // masada oturup kâğıt oynar
         Object.assign(p, { kL: -1.5, kR: -1.5, dL: 1.5, dR: 1.5, gy: -0.4, gx: 0.15, oL: -0.85, oR: -0.85 + Math.max(0, sn) * 0.35, eL: -1.0, eR: -0.9 - Math.max(0, sn) * 0.3 }); break;
+      case 'dans': {   // dans: kollar havada, ayaklar sırayla vurur, gövde döner
+        Object.assign(p, { oL: -2.6 + sn * 0.3, oR: -2.6 - sn * 0.3, eL: -0.6, eR: -0.6, kL: Math.max(0, sn) * -0.7, kR: Math.max(0, -sn) * -0.7, dL: Math.max(0, sn) * 1.1, dR: Math.max(0, -sn) * 1.1, gy: Math.abs(cs) * 0.08 });
+        u.govdeG.rotation.y = Math.sin(f * 0.5) * 0.6;
+        break;
+      }
+      case 'besle':    // ata saman uzatır, hafif eğilir
+        Object.assign(p, { gx: 0.25, oR: -1.2 + sn * 0.12, eR: -0.2, oL: -0.5 + cs * 0.15, eL: -0.6 }); break;
+      case 'ye':       // masada oturup kaşıkla yer
+        Object.assign(p, { kL: -1.5, kR: -1.5, dL: 1.5, dR: 1.5, gy: -0.4, gx: 0.12, oL: -0.8, eL: -0.9, oR: -0.7 - Math.max(0, sn) * 0.5, eR: -1.2 - Math.max(0, sn) * 0.9 }); break;
       case 'tras':     // berber: usturayla tıraş eder
         Object.assign(p, { gx: 0.25, oR: -1.35 + sn * 0.12, eR: -0.7 + cs * 0.25, oL: -1.2, eL: -0.8 }); break;
       default:         // genel çalışma
@@ -250,7 +259,7 @@ const Karakter = (() => {
     u.kolL.rotation.x = yum(u.kolL.rotation.x, p.oL, 12); dirL.rotation.x = yum(dirL.rotation.x, p.eL, 12);
     if (!u.serif) { u.kolR.rotation.x = yum(u.kolR.rotation.x, p.oR, anim === 'dov' ? 20 : 12); dirR.rotation.x = yum(dirR.rotation.x, p.eR, 12); dirR.rotation.y = yum(dirR.rotation.y, p.sR, 12); }
     u.govdeG.rotation.x = yum(u.govdeG.rotation.x, p.gx, 10); u.govdeG.position.y = yum(u.govdeG.position.y, p.gy, 10);
-    u.govdeG.rotation.y = yum(u.govdeG.rotation.y, 0, 10);
+    if (anim !== 'dans') u.govdeG.rotation.y = yum(u.govdeG.rotation.y, 0, 10);
     if (u.sise) u.sise.rotation.x = anim === 'dok' ? 1.9 + Math.sin(f * 0.7) * 0.25 : 0;   // şişe ağzı aşağı
   }
   // Bu görev hareketinin ağ kodu

@@ -10,7 +10,7 @@ const Kasaba = (() => {
   const ARA = 8;               // ara sokak x -8..8
   const KAT_Y = 3.2;           // üst katın zemin yüksekliği
   // Görev hareketleri (karakter.js pozları). Ağda h = 10 + sıra
-  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras'];
+  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye'];
   const animKodu = ad => 10 + Math.max(0, ANIMLER.indexOf(ad));
   const DUVAR = 0.4, KAPI = 2.2;
 
@@ -124,11 +124,20 @@ const Kasaba = (() => {
     G('at', 'Ahırdan at çal', 'Ahırdan at çalındı', '🐎', 5, icNokta('ahir', -4, -2)),
     G('sigir', 'Sığırları ağıldan sal', 'Sığırlar ağıldan kaçtı', '🐄', 4, { x: -16, z: 54.5, yon: 0 }, 'uzan'),
     G('zehir', 'Kasaba kuyusuna zehir dök', 'Kasaba kuyusuna zehir döküldü', '☠️', 5, { x: 0, z: 2.4, yon: Math.PI }, 'dok'),
-    G('tras', 'Berberde tıraş olurken kasayı gözetle', 'Berberin kasası soyuldu', '💈', 6, icNokta('berber', 2, -2.6), 'otur'),
+    G('tras', 'Berberde saç tıraşı ol', 'Berberde biri tıraş oldu', '💈', 6, icNokta('berber', 2, -2.6), 'otur'),
+    G('atbesle', 'Ahırdaki atı besle', 'Ahırdaki at beslendi', '🥕', 4, icNokta('ahir', 3.2, -2), 'besle'),
+    G('dans', 'Salonda dans et', 'Salonda biri dans etti', '💃', 5, icNokta('salon', -5.5, 3.5, 0, 0), 'dans'),
+    G('yemek', 'Otelde yemek ye', 'Otelde biri yemek yedi', '🍽️', 5, icNokta('otel', -4, 1.6, 0, 0), 'ye'),
   ];
   // Berber ustası koltuğun arkasında durur (müşteri oturunca tıraş eder)
   const berberUsta = icNokta('berber', 2, -1.75);
   // Kılık değiştirme noktaları
+  // Ağır suçlar: aranma seviyesini 1 artırır (diğerleri 1 düşürür). Simgeleri kırmızı çerçeveli.
+  const AGIR = new Set(['banka', 'zehir', 'dinamit', 'kibrit', 'su', 'at', 'tabanca', 'anahtar', 'kasa']);
+  gorevler.forEach(g => { g.agir = AGIR.has(g.id); });
+  // Aranma seviyesine göre görevin posta kutusuna düşme süresi (ms): 0→15 sn … 6→hemen
+  const POSTA_GECIKME = [15000, 12000, 10000, 8000, 6000, 3000, 0];
+
   // Kılık değiştirme için aday yerler: her oyunda bunlardan rastgele birkaçı seçilir (sadece haydutlar görür)
   const kiliklar = [
     { id: 'terzi', ad: 'Terzi', ...icNokta('terzi', 2.5, -3) },
@@ -187,6 +196,7 @@ const Kasaba = (() => {
         masa(4.15, -2, KY, yesil); masa(-2, 2, KY); break;                                                                // üst kat kumar masası
       case 'otel':
         k(4, 1.1, 0.8, 3, 0.55, -2, ahsap);                                                                              // resepsiyon
+        masa(-4, 2.85);                                                                                                  // yemek masası
         [[5, -5.5], [5, 3], [-2, -5.5]].forEach(([x, z]) => { k(2.2, 0.5, 1.2, x, KY + 0.25, z, beyaz); k(2.2, 0.8, 0.2, x, KY + 0.4, z - 0.6, ahsap, { carp: false }); });
         break;
       case 'belediye':
@@ -476,7 +486,7 @@ const Kasaba = (() => {
     u.sure = g ? g.sure : 3;
     u.bekle = [u.sure, u.sure];
     u.yerler = [{ x: u.x, z: u.z }];
-    if (u.anim === 'otur' || u.anim === 'kumar') return;
+    if (u.anim === 'otur' || u.anim === 'kumar' || u.anim === 'ye') return;
     const px = Math.cos(u.yon || 0), pz = -Math.sin(u.yon || 0);   // bakış yönüne dik
     for (const s of [0.8, -0.8]) {
       const x = u.x + px * s, z = u.z + pz * s;
@@ -498,7 +508,7 @@ const Kasaba = (() => {
   function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
 
   return {
-    susler, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
+    susler, POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
     SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
     it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
   };

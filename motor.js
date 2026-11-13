@@ -46,7 +46,7 @@ const Motor = (() => {
       varliklar: new Map(), oyuncular: [], yapilan: new Set(), gorevSayi: 0, bekleyen: [],
       sonrakiNo: toplam, sonSes: 0, yeniKasabali: [],
       serifCikis: Date.now() + BEKLEME * 1000, kapiAcildi: false,
-      tamamlanan: [], postaSayi: -1, sonPosta: 0,   // posta kutuları için: [{ gid, t }]
+      tamamlanan: [], postaSayi: -1, postaSeviye: -1, sonPosta: 0, aranma: 0,   // aranma: haydutların aranma seviyesi 0..6   // posta kutuları için: [{ gid, t }]
       aktif: new Set(karistir(Kasaba.gorevler.map(g => g.id)).slice(0, Math.min(Kasaba.gorevler.length, ayar.hedef))),   // bu oyunun görevleri
       kilikYerleri: new Set(karistir(Kasaba.kiliklar.map(k => k.id)).slice(0, Kasaba.KILIK_SAYISI)),   // her oyunda farklı; sadece haydutlara söylenir
     };
@@ -292,8 +292,15 @@ const Motor = (() => {
     // Posta kutularındaki sayı: 10 sn önceye kadar yapılmış görevler
     if (simdi - o.sonPosta > 1000) {
       o.sonPosta = simdi;
-      const n = postaBilgisi().length;
-      if (n !== o.postaSayi) { o.postaSayi = n; cb.herkese({ tip: 'posta', n }); }
+      const gorunen = postaKayitlari(), n = gorunen.length;
+      // Şerifler aranma seviyesini de posta kutusundan (gecikmeli) öğrenir
+      const sonKayit = gorunen.reduce((a, k) => (!a || k.t > a.t ? k : a), null), seviye = sonKayit ? sonKayit.seviye : 0;
+      if (n !== o.postaSayi || seviye !== o.postaSeviye) {
+        const yeni = n > o.postaSayi && o.postaSayi >= 0 ? gorunen.filter(k => k.gorunur > simdi - 1500).map(k => k.gid) : [];
+        o.postaSayi = n; o.postaSeviye = seviye;
+        // Aranma 5+ iken yeni düşen görevin yeri şeriflere haritada gösterilir
+        cb.herkese({ tip: 'posta', n, seviye, yerler: seviye >= 5 ? yeni : [] });
+      }
     }
     kontrol();
   }
@@ -306,11 +313,17 @@ const Motor = (() => {
   function gorevBitti(p, gid, simdi) {
     if (o.yapilan.has(gid)) { cb.kisiye(p.id, { tip: 'is', iptal: true, yapilmis: gid }); return; }
     const g = Kasaba.gorevler.find(x => x.id === gid);
-    o.yapilan.add(gid); o.gorevSayi++; o.tamamlanan.push({ gid, t: simdi });
+    o.yapilan.add(gid); o.gorevSayi++;
+    // Ağır suç aranmayı artırır, normal iş azaltır. Aranma yükseldikçe bilgi posta kutusuna daha çabuk düşer.
+    o.aranma = Math.max(0, Math.min(6, o.aranma + (g.agir ? 1 : -1)));
+    // Şerifler ipucu seviyesini (aranma) 5-10 sn gecikmeyle öğrenir; sıra no ile eski haber yenisini ezmez
+    o.ipucuSira = (o.ipucuSira || 0) + 1;
+    o.oyuncular.forEach(q => { if (q.rol === 'serif') o.bekleyen.push({ zaman: simdi + rnd(5000, 10000), id: q.id, mesaj: { tip: 'ipucu', seviye: o.aranma, sira: o.ipucuSira, olayZamani: simdi } }); });
+    o.tamamlanan.push({ gid, t: simdi, gorunur: simdi + Kasaba.POSTA_GECIKME[o.aranma], seviye: o.aranma });
     cb.kisiye(p.id, { tip: 'is', bitti: true });
     const metin = `${g.emoji} ${g.olay}`;
     o.oyuncular.forEach(q => {
-      if (q.rol === 'haydut') cb.kisiye(q.id, { tip: 'bildirim', metin: `✅ ${g.olay}`, gid, sayi: o.gorevSayi, gecen: 0, olayZamani: simdi, kim: p.ad });
+      if (q.rol === 'haydut') { cb.kisiye(q.id, { tip: 'bildirim', metin: `✅ ${g.olay}`, gid, sayi: o.gorevSayi, gecen: 0, olayZamani: simdi, kim: p.ad }); cb.kisiye(q.id, { tip: 'aranma', seviye: o.aranma, agir: g.agir }); }
       else if (q.muhbirAktif) {   // muhbir: bu görevi şerife hemen fısıldar (adı ve yeri)
         q.muhbirAktif = false; cb.kisiye(q.id, { tip: 'muhbir', aktif: false });
         o.bekleyen.push({ zaman: simdi + 1500, id: q.id, mesaj: { tip: 'bildirim', metin: `📡 Muhbir: ${metin}`, gid, olayZamani: simdi, muhbir: true } });
@@ -329,8 +342,8 @@ const Motor = (() => {
     });
   }
 
-  const POSTA_GECIKME = 10000;
-  function postaBilgisi() { const sinir = Date.now() - POSTA_GECIKME; return o.tamamlanan.filter(k => k.t <= sinir).map(k => k.gid); }
+  function postaKayitlari() { const simdi = Date.now(); return o.tamamlanan.filter(k => k.gorunur <= simdi); }
+  function postaBilgisi() { return postaKayitlari().map(k => k.gid); }
 
   // Kim kimi ne kadar duyar? (0..1)
   function sesTablosu() {

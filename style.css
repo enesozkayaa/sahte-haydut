@@ -39,7 +39,11 @@ label { font-weight: 800; font-size: 14px; }
 #ustSol { position: absolute; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); display: grid; gap: 4px; font-weight: 900; }
 #rolRozet { font-family: Rye, serif; font-size: 20px; padding: 4px 10px; border-radius: 8px; background: #0006; }
 #rolRozet.haydut { color: #7dff8a; } #rolRozet.serif { color: #ffd23f; } #rolRozet.olu { color: #ccc; }
-#sureYazi { font-size: 22px; } #gorevSayac, #hakYazi { font-size: 15px; }
+#sureYazi { font-size: 22px; } #gorevSayac, #hakYazi, #aranmaYazi { font-size: 15px; }
+#aranmaYazi b { color: #ff5a3a; letter-spacing: -1px; } #aranmaYazi i { font-style: normal; opacity: .55; letter-spacing: -1px; }
+#aranmaYazi.orta b { color: #ff3a1a; } #aranmaYazi.yuksek { animation: aranmaYan 0.8s infinite alternate; }
+@keyframes aranmaYan { from { text-shadow: 0 0 4px #f00; } to { text-shadow: 0 0 12px #f00; } }
+#gorevListe li.agir { color: #ffb0a0; }
 #akis { position: absolute; right: max(10px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 52px); width: min(330px, 58vw); display: grid; gap: 5px; }
 #akis div { background: #000a; border-left: 4px solid #ffd23f; padding: 6px 9px; border-radius: 6px; font-size: 14px; font-weight: 800; animation: gel .3s; }
 #akis div.iyi { border-color: #6ce07a; } #akis div.kotu { border-color: #ff5a4a; } #akis div.takim { border-color: #7dff8a; }
@@ -65,7 +69,7 @@ label { font-weight: 800; font-size: 14px; }
 #muhbirBtn.aktif { box-shadow: 0 0 0 4px #ffd23f !important; }
 #kosBtn.basili { background: #ffd23f99 !important; }
 #nisanBtn.basili { background: #ffffff99 !important; }
-#gorevPanel { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 128px); pointer-events: auto; max-width: 230px; }
+#gorevPanel { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 150px); pointer-events: auto; max-width: 230px; }
 #gorevPanel > button { padding: 5px 10px; font-size: 14px; background: #0007; color: #fff; box-shadow: none; }
 #gorevListe { list-style: none; margin: 4px 0 0; padding: 6px 8px; background: #0008; border-radius: 8px; max-height: min(42vh, calc(100vh - 380px)); min-height: 80px; overflow-y: auto; font-size: 13px; font-weight: 800; }
 #gorevListe li { padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -97,8 +101,8 @@ body.dokun #ipucu { display: none; }
 @media (max-height: 500px) {
   #harita { width: 118px; height: 118px; }
   #harita.buyuk { width: min(260px, 70vh); height: min(260px, 70vh); }
-  #ustSol { gap: 2px; } #rolRozet { font-size: 14px; padding: 2px 8px; } #sureYazi { font-size: 15px; } #gorevSayac, #hakYazi { font-size: 12px; }
-  #gorevPanel { top: calc(max(6px, env(safe-area-inset-top)) + 88px); max-width: 190px; }
+  #ustSol { gap: 2px; } #rolRozet { font-size: 14px; padding: 2px 8px; } #sureYazi { font-size: 15px; } #gorevSayac, #hakYazi, #aranmaYazi { font-size: 12px; }
+  #gorevPanel { top: calc(max(6px, env(safe-area-inset-top)) + 104px); max-width: 190px; }
   #gorevPanel > button { padding: 3px 8px; font-size: 12px; }
   #gorevListe { max-height: calc(100vh - 250px); font-size: 11px; }
   #bekleYazi { font-size: 14px; top: calc(max(6px, env(safe-area-inset-top)) + 34px); padding: 4px 10px; left: 60%; }
@@ -115,7 +119,7 @@ body.dokun #ipucu { display: none; }
 @media (max-width: 600px) and (min-height: 501px) {
   #serifPanel { top: calc(max(8px, env(safe-area-inset-top)) + 50px); max-width: 92vw; }
   #akis { top: calc(max(8px, env(safe-area-inset-top)) + 84px); width: 52vw; }
-  #gorevPanel { top: calc(max(10px, env(safe-area-inset-top)) + 122px); }
+  #gorevPanel { top: calc(max(10px, env(safe-area-inset-top)) + 142px); }
   #bekleYazi { top: calc(max(8px, env(safe-area-inset-top)) + 84px); font-size: 14px; white-space: normal; width: 80vw; }
   #elendiYazi { top: calc(max(8px, env(safe-area-inset-top)) + 84px); width: 86vw; }
 }

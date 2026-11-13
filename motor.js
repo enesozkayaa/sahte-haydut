@@ -190,16 +190,26 @@ const Motor = (() => {
     }
     if (!v.yol || !v.yol.length) {
       const r = Math.random();
-      const aktifYerler = Kasaba.ugraklar.filter(a => a.gid && o.aktif.has(a.gid));
-      const digerGorev = Kasaba.ugraklar.filter(a => a.gorev && !(a.gid && o.aktif.has(a.gid)));
+      // Bir görev yerinde en fazla 2 kasabalı (yer sayısı kadar): dolu yerlere gitmez
+      const dolu = new Map();
+      o.varliklar.forEach(x => { if (x !== v && !x.oyuncuId && !x.durum && x.hedef?.gorev) dolu.set(x.hedef, (dolu.get(x.hedef) || new Set()).add(x.yerNo)); });
+      const onceki = v.hedef;   // az önce bıraktığı yeri hemen tekrar seçmesin
+      const bos = a => a !== onceki && (!a.gorev || (dolu.get(a)?.size || 0) < a.yerler.length);
+      const aktifYerler = Kasaba.ugraklar.filter(a => a.gid && o.aktif.has(a.gid) && bos(a));
+      const digerGorev = Kasaba.ugraklar.filter(a => a.gorev && !(a.gid && o.aktif.has(a.gid)) && bos(a));
       // %65 bu oyunun görevleri, %15 diğer görev/kılık yerleri, %20 gezinme (cadde, evler, bina içleri)
       // Görev seçerken çoğunlukla yakındakilere gider (uzun yürüyüş yerine daha çok görev yapsın)
       const yakindan = l => { const sirali = l.map(a => [a, (a.x - v.x) ** 2 + (a.z - v.z) ** 2]).sort((p, q) => p[1] - q[1]); return Math.random() < 0.85 ? sec(sirali.slice(0, 3))[0] : sec(l); };
       // %88 bir görev yerine (bu oyunun görevleri iki kat sık seçilir), %12 gezinme
-      const u = r < 0.88 ? yakindan([...aktifYerler, ...aktifYerler, ...digerGorev]) : sec(Kasaba.ugraklar.filter(a => !a.gorev));
+      const u = r < 0.75 ? yakindan([...aktifYerler, ...aktifYerler, ...digerGorev]) : yakindan(Kasaba.ugraklar.filter(a => !a.gorev && bos(a)));
       v.hedef = u;
-      const oyna = u.gorev ? 0.05 : u.bina ? 0.3 : 0.8;   // görev yerine tam otursun/dursun (sandalye, örs…)
-      v.yol = Kasaba.yol(v.x, v.z, u.x + rnd(-oyna, oyna), u.z + rnd(-oyna, oyna), v.y, u.kat, u.bina);
+      let hx = u.x, hz = u.z;
+      if (u.gorev) {   // boş yerlerden birini al (biri tam noktada, diğeri yanında)
+        const alinan = dolu.get(u) || new Set();
+        v.yerNo = u.yerler.findIndex((_, i) => !alinan.has(i)); if (v.yerNo < 0) v.yerNo = 0;
+        hx = u.yerler[v.yerNo].x; hz = u.yerler[v.yerNo].z;
+      } else { v.yerNo = -1; const oyna = u.bina ? 0.3 : 0.8; hx += rnd(-oyna, oyna); hz += rnd(-oyna, oyna); }
+      v.yol = Kasaba.yol(v.x, v.z, hx, hz, v.y, u.kat, u.bina);
       v.ilerleme = { t: 0, x: v.x, z: v.z };
       return;
     }
@@ -208,7 +218,7 @@ const Motor = (() => {
     // Köşeleri keskin dönmesin: ara noktaya yaklaşınca bir sonrakine yönelir (köşeyi yuvarlar)
     if (d < (sonNokta || n.tam ? 0.3 : 1.4)) {
       v.yol.shift();
-      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = !!v.hedef?.gorev && Math.random() < 0.95; v.calismaAnim = v.hedef?.anim || 'calis'; }
+      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = (!!v.hedef?.gorev && Math.random() < 0.95) || (!!v.hedef?.ufakIs && Math.random() < 0.7); v.calismaAnim = v.hedef?.anim || 'calis'; }
       return;
     }
     // Ara sıra caddede durup etrafa bakar

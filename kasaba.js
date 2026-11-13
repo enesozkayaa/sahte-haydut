@@ -417,6 +417,23 @@ const Kasaba = (() => {
     if (b.ic === 2) ugraklar.push({ ...icNokta(b.id, 3, 2, 1, 0), bekle: [3, 7] }, { ...icNokta(b.id, -1, -3.5, 1, Math.PI), bekle: [3, 7] });
   });
   ugraklar.forEach(u => { u.kat = u.kat || 0; u.bina = u.bina || null; });
+  // Bina içi gezinme noktalarında kasabalı kısa bir süre bir şeyle uğraşır (görev değil, ortalık hareketli görünsün)
+  ugraklar.forEach(u => { if (!u.gorev && u.bina) { u.ufakIs = true; u.anim = Math.random() < 0.5 ? 'ara' : 'calis'; u.bekle = [3, 6]; } });
+  // Görev yerlerinde en fazla 2 kasabalı: biri tam noktada, ikincisi yanında (sandalyeli görevlerde 1).
+  // Bot görevde, oyuncunun o görevi yaptığı süre kadar kalır (kılıkta 3 sn).
+  ugraklar.forEach(u => {
+    if (!u.gorev) return;
+    const g = u.gid && gorevler.find(x => x.id === u.gid);
+    u.sure = g ? g.sure : 3;
+    u.bekle = [u.sure, u.sure];
+    u.yerler = [{ x: u.x, z: u.z }];
+    if (u.anim === 'otur' || u.anim === 'kumar') return;
+    const px = Math.cos(u.yon || 0), pz = -Math.sin(u.yon || 0);   // bakış yönüne dik
+    for (const s of [0.8, -0.8]) {
+      const x = u.x + px * s, z = u.z + pz * s;
+      if (!icerde(x, z, 0.4, u.kat || 0) && (!u.bina || icBina(x, z))) { u.yerler.push({ x, z }); break; }
+    }
+  });
   // Eşyanın içine denk gelen gezinme noktalarını yakındaki boş yere kaydır (görevler hariç, onlar elle yerleşti)
   ugraklar.forEach(u => {
     if (u.gorev || !icerde(u.x, u.z, 0.4, u.kat)) return;

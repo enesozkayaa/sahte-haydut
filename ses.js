@@ -35,6 +35,7 @@ const Ses = (() => {
     iyi() { [523, 659, 784].forEach((f, i) => ton(f, 0.2, 'triangle', 0.12, i * 0.1)); },
     kotu() { ton(300, 0.3, 'sawtooth', 0.08, 0, -150); },
     hapis() { ton(160, 0.5, 'sawtooth', 0.1, 0, -60); gurultu(0.3, 0.3, 600, 'lowpass', 0.05); },
+    posta() { [1568, 1175, 1568].forEach((f, i) => ton(f, 0.35, 'sine', 0.14, i * 0.16)); },   // posta zili
     tik() { ton(1200, 0.03, 'square', 0.03); },
     kazandi() { [392, 523, 659, 784, 1046].forEach((f, i) => ton(f, 0.25, 'triangle', 0.13, i * 0.12)); },
     kaybetti() { [392, 330, 262, 196].forEach((f, i) => ton(f, 0.3, 'triangle', 0.12, i * 0.16)); },

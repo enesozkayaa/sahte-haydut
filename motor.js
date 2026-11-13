@@ -47,6 +47,8 @@ const Motor = (() => {
       sonrakiNo: toplam, sonSes: 0, yeniKasabali: [],
       serifCikis: Date.now() + BEKLEME * 1000, kapiAcildi: false,
       tamamlanan: [], postaSayi: -1, sonPosta: 0,   // posta kutuları için: [{ gid, t }]
+      aktif: new Set(karistir(Kasaba.gorevler.map(g => g.id)).slice(0, Math.min(Kasaba.gorevler.length, ayar.hedef))),   // bu oyunun görevleri
+      kilikYerleri: new Set(karistir(Kasaba.kiliklar.map(k => k.id)).slice(0, Kasaba.KILIK_SAYISI)),   // her oyunda farklı; sadece haydutlara söylenir
     };
     Kasaba.odaKapisi(true);
     oyuncular.forEach((p, i) => {
@@ -68,7 +70,7 @@ const Motor = (() => {
         tip: 'basla', benimNo: p.no, rol: p.rol, x: v.x, z: v.z, tipNo: v.tip,
         takim: p.rol === 'haydut' ? haydutNolar : serifNolar, serifler: serifNolar,
         takimAdlar: adlar(p.rol), serifAdlar: adlar('serif'),
-        ayar: o.ayar, haydutSayisi: hayN, serifSayisi: n - hayN, sure: ayar.sure * 60, bekleme: BEKLEME,
+        ayar: o.ayar, haydutSayisi: hayN, serifSayisi: n - hayN, sure: ayar.sure * 60, bekleme: BEKLEME, gorevler: [...o.aktif], kiliklar: p.rol === 'haydut' ? [...o.kilikYerleri] : [],
       });
     });
     serifYay();
@@ -96,7 +98,7 @@ const Motor = (() => {
       case 'gorev': {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is) return;
         const g = Kasaba.gorevler.find(x => x.id === m.gid);
-        if (!g || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5) return;
+        if (!g || !o.aktif.has(g.id) || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5) return;
         if (o.yapilan.has(g.id)) { cb.kisiye(id, { tip: 'is', iptal: true, yapilmis: g.id }); return; }
         p.is = { tur: 'gorev', gid: g.id, bitis: Date.now() + g.sure * 1000, x: g.x, z: g.z, r: 3.2 };   // oyuncu görev yerine yerleşir (yürürse iptal)
         cb.kisiye(id, { tip: 'is', ad: g.ad, sure: g.sure });
@@ -104,7 +106,7 @@ const Motor = (() => {
       }
       case 'kilik': {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is || p.kilik <= 0) return;
-        const k = Kasaba.kiliklar.find(x => x.id === m.kid);
+        const k = o.kilikYerleri.has(m.kid) && Kasaba.kiliklar.find(x => x.id === m.kid);
         if (!k || Math.hypot(v.x - k.x, v.z - k.z) > 2.8) return;
         p.is = { tur: 'kilik', kid: k.id, bitis: Date.now() + 3000, x: k.x, z: k.z, r: 3.2 };
         cb.kisiye(id, { tip: 'is', ad: 'Kılık değiştiriliyor', sure: 3 });
@@ -187,7 +189,14 @@ const Motor = (() => {
       return;
     }
     if (!v.yol || !v.yol.length) {
-      const u = sec(Kasaba.ugraklar);
+      const r = Math.random();
+      const aktifYerler = Kasaba.ugraklar.filter(a => a.gid && o.aktif.has(a.gid));
+      const digerGorev = Kasaba.ugraklar.filter(a => a.gorev && !(a.gid && o.aktif.has(a.gid)));
+      // %65 bu oyunun görevleri, %15 diğer görev/kılık yerleri, %20 gezinme (cadde, evler, bina içleri)
+      // Görev seçerken çoğunlukla yakındakilere gider (uzun yürüyüş yerine daha çok görev yapsın)
+      const yakindan = l => { const sirali = l.map(a => [a, (a.x - v.x) ** 2 + (a.z - v.z) ** 2]).sort((p, q) => p[1] - q[1]); return Math.random() < 0.85 ? sec(sirali.slice(0, 3))[0] : sec(l); };
+      // %88 bir görev yerine (bu oyunun görevleri iki kat sık seçilir), %12 gezinme
+      const u = r < 0.88 ? yakindan([...aktifYerler, ...aktifYerler, ...digerGorev]) : sec(Kasaba.ugraklar.filter(a => !a.gorev));
       v.hedef = u;
       const oyna = u.gorev ? 0.05 : u.bina ? 0.3 : 0.8;   // görev yerine tam otursun/dursun (sandalye, örs…)
       v.yol = Kasaba.yol(v.x, v.z, u.x + rnd(-oyna, oyna), u.z + rnd(-oyna, oyna), v.y, u.kat, u.bina);
@@ -199,7 +208,7 @@ const Motor = (() => {
     // Köşeleri keskin dönmesin: ara noktaya yaklaşınca bir sonrakine yönelir (köşeyi yuvarlar)
     if (d < (sonNokta || n.tam ? 0.3 : 1.4)) {
       v.yol.shift();
-      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = !!v.hedef?.gorev && Math.random() < 0.85; v.calismaAnim = v.hedef?.anim || 'calis'; }
+      if (!v.yol.length) { const b = v.hedef?.bekle || [1, 4]; v.bekle = rnd(b[0], b[1]); v.bakis = v.hedef?.yon ?? null; v.calisiyor = !!v.hedef?.gorev && Math.random() < 0.95; v.calismaAnim = v.hedef?.anim || 'calis'; }
       return;
     }
     // Ara sıra caddede durup etrafa bakar
@@ -287,10 +296,9 @@ const Motor = (() => {
     const metin = `${g.emoji} ${g.olay}`;
     o.oyuncular.forEach(q => {
       if (q.rol === 'haydut') cb.kisiye(q.id, { tip: 'bildirim', metin: `✅ ${g.olay}`, gid, sayi: o.gorevSayi, gecen: 0, olayZamani: simdi, kim: p.ad });
-      else {
-        const gecikme = q.muhbirAktif ? 2000 : rnd(10000, 14000);
-        if (q.muhbirAktif) { q.muhbirAktif = false; cb.kisiye(q.id, { tip: 'muhbir', aktif: false }); }
-        o.bekleyen.push({ zaman: simdi + gecikme, id: q.id, mesaj: { tip: 'bildirim', metin, gid, sayi: o.gorevSayi, olayZamani: simdi } });
+      else if (q.muhbirAktif) {   // muhbir: bu görevi şerife hemen fısıldar (adı ve yeri)
+        q.muhbirAktif = false; cb.kisiye(q.id, { tip: 'muhbir', aktif: false });
+        o.bekleyen.push({ zaman: simdi + 1500, id: q.id, mesaj: { tip: 'bildirim', metin: `📡 Muhbir: ${metin}`, gid, olayZamani: simdi, muhbir: true } });
       }
     });
   }
@@ -302,7 +310,7 @@ const Motor = (() => {
     const k = Kasaba.kiliklar.find(x => x.id === kid);
     o.oyuncular.forEach(q => {
       if (q.rol !== 'serif') return;
-      o.bekleyen.push({ zaman: simdi + rnd(10000, 14000), id: q.id, mesaj: { tip: 'bildirim', metin: `👔 ${k.ad} önünde biri kılık değiştirdi`, gid: 'kilik:' + kid, olayZamani: simdi } });
+      o.bekleyen.push({ zaman: simdi + rnd(10000, 14000), id: q.id, mesaj: { tip: 'bildirim', metin: '👔 Kasabada biri kılık değiştirdi', gid: 'kilik', olayZamani: simdi } });
     });
   }
 

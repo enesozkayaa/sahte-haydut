@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Aranıyor!</title>
+  <meta name="description" content="Vahşi Batı kasabasında kalabalığa karış: haydutlar gizlice soygun yapar, şerifler kalabalığın içinden onları bulur.">
+  <meta name="theme-color" content="#3b2414">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="ikonlar/ikon-192.png">
+  <link rel="apple-touch-icon" href="ikonlar/ikon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rye&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="sahne"></canvas>
+
+  <!-- Giriş -->
+  <section id="giris" class="ekran">
+    <div class="kart afis">
+      <div class="afisUst">ARANIYOR!</div>
+      <p class="alt">Kasabada kalabalığa karış. <b>Haydutlar</b> kasabalı gibi gezip gizlice soygun yapar, <b>şerifler</b> kalabalığın içinden gerçek oyuncuları bulup vurur.</p>
+      <label for="adim">Adın</label>
+      <input id="adim" maxlength="14" placeholder="Adın" autocomplete="off">
+      <button id="odaKurBtn" class="ana">🏠 Oda aç</button>
+      <div class="satir">
+        <input id="odaKoduGir" maxlength="5" placeholder="ODA KODU" autocomplete="off" autocapitalize="characters">
+        <button id="katilBtn">Katıl</button>
+      </div>
+      <p id="girisDurum" class="durum"></p>
+      <details class="nasil">
+        <summary>📖 Nasıl oynanır?</summary>
+        <ul>
+          <li>2–10 kişi oynanır. Oda sahibi kaç haydut olacağını seçer, kalan herkes <b>şerif</b>tir.</li>
+          <li>Kasabada onlarca kasabalı yavaş yavaş gezer. Sen de onlar gibi yürü; koşmak dikkat çeker.</li>
+          <li><b>Haydut:</b> sarı işaretli yerlerde görev yap (yaklaş, <b>E</b> veya 🎯 tuşu). Görevi yaparken yerinden kıpırdama. Takım arkadaşlarını yeşil çizgiyle görürsün. Terzide kılık değiştirebilirsin.</li>
+          <li><b>Şerif:</b> görev yapılınca sağ üstte en az 10 saniye gecikmeyle yazar ("12 sn önce"). O sırada orada kim vardı, düşün ve vur. Masum kasabalıyı vurursan hakkın azalır; biterse hapse girersin. 📡 Muhbir: bir sonraki bildirimi hemen görürsün (1 kere).</li>
+          <li><b>Kazanma:</b> haydutlar görev hedefine ulaşırsa ya da süre biterse kazanır. Şerifler bütün haydutları vurursa kazanır.</li>
+          <li>🎤 Yakınındakiler seni duyar. 📻 Telsizi açınca sadece takımın duyar. Ölenler sadece ölüleri duyar.</li>
+          <li>Bilgisayar: WASD yürü, Shift koş, fare bak, sol tık ateş, E görev, V kamera, T telsiz, M harita.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- Bekleme odası -->
+  <section id="lobi" class="ekran gizli">
+    <div class="kart">
+      <h2>Bekleme odası</h2>
+      <div class="kodKutu">Oda kodu: <b id="lobiKod">-----</b> <button id="kodKopyalaBtn" class="kucuk">📋</button></div>
+      <ul id="lobiListe"></ul>
+      <div id="ayarlar">
+        <label>🦹 Haydut sayısı <select id="ayHaydut"></select></label>
+        <label>🔫 Şerif atış hakkı <select id="ayHak"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></label>
+        <label>⏱️ Süre <select id="aySure"><option value="5">5 dk</option><option value="8" selected>8 dk</option><option value="10">10 dk</option><option value="15">15 dk</option></select></label>
+        <label>🎯 Görev hedefi <select id="ayHedef"><option>5</option><option selected>8</option><option>10</option><option>12</option><option>15</option></select></label>
+        <label>👥 Kasabalı sayısı <select id="ayKasabali"><option value="30">30</option><option value="45" selected>45</option><option value="60">60</option></select></label>
+        <label>👔 Kılık değiştirme hakkı <select id="ayKilik"><option>1</option><option selected>2</option><option>3</option></select></label>
+      </div>
+      <p id="ayarOzet" class="durum"></p>
+      <div class="satir">
+        <button id="lobiMikBtn">🎤 Mikrofon kapalı</button>
+        <button id="lobiCikBtn">🚪 Çık</button>
+      </div>
+      <button id="baslaBtn" class="ana">🤠 Oyunu başlat</button>
+      <p id="lobiDurum" class="durum"></p>
+    </div>
+  </section>
+
+  <!-- Oyun içi -->
+  <div id="hud" class="gizli">
+    <div id="ustSol">
+      <div id="rolRozet"></div>
+      <div id="sureYazi">8:00</div>
+      <div id="gorevSayac"></div>
+      <div id="hakYazi"></div>
+    </div>
+    <div id="akis"></div>
+    <div id="toast"></div>
+    <canvas id="harita" width="300" height="300"></canvas>
+    <div id="nisan"></div>
+    <div id="ilerleme" class="gizli"><span id="ilerlemeYazi"></span><div><i id="ilerlemeCubuk"></i></div></div>
+    <button id="eylemBtn" class="gizli"></button>
+    <div id="sagTuslar">
+      <button id="atesBtn" class="gizli">🔫</button>
+      <button id="kosBtn" class="dokunmatik">🏃</button>
+      <button id="muhbirBtn" class="gizli">📡</button>
+    </div>
+    <div id="ustSag">
+      <button id="kameraBtn" title="Kamera (V)">👁️</button>
+      <button id="telsizBtn" title="Telsiz (T)">📻</button>
+      <button id="mikBtn" title="Mikrofon">🎤</button>
+      <button id="sesBtn" title="Oyun sesi">🔊</button>
+    </div>
+    <div id="joystick"><div id="joyTopuz"></div></div>
+    <div id="elendiYazi" class="gizli"></div>
+    <div id="ipucu">Ekrana tıkla: fareyle bak · WASD yürü · Shift koş · E görev · V kamera · T telsiz · M harita</div>
+  </div>
+
+  <!-- Sonuç -->
+  <section id="sonuc" class="ekran gizli">
+    <div class="kart afis">
+      <div id="sonucBaslik" class="afisUst">KAZANDI</div>
+      <p id="sonucNeden" class="alt"></p>
+      <ul id="sonucListe"></ul>
+      <div class="satir">
+        <button id="lobiyeBtn">↩ Bekleme odası</button>
+        <button id="tekrarBtn" class="ana">🔁 Tekrar oyna</button>
+      </div>
+      <p id="sonucBekle" class="durum">Oda sahibi yeni oyunu başlatacak…</p>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="kasaba.js"></script>
+  <script src="karakter.js"></script>
+  <script src="sahne.js"></script>
+  <script src="ag.js"></script>
+  <script src="ses.js"></script>
+  <script src="motor.js"></script>
+  <script src="oyun.js"></script>
+  <script>
+    // iPhone sayfayı kendi kendine büyütmesin (iki parmak / çift dokunma)
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+    document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+  </script>
+</body>
+</html>

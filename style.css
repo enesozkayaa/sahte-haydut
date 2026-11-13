@@ -1,0 +1,75 @@
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #3b2414; font-family: Nunito, system-ui, sans-serif; color: #2a1608; -webkit-text-size-adjust: 100%; }
+#sahne { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.gizli { display: none !important; }
+button { font: inherit; font-weight: 800; font-size: 16px; border: 0; border-radius: 12px; padding: 11px 14px; cursor: pointer; background: #e8d3a8; color: #3b2414; box-shadow: 0 3px 0 #9a7a4a; }
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 #9a7a4a; }
+button:disabled { opacity: .5; }
+button.ana { background: linear-gradient(#e0533a, #b5321e); color: #fff6e0; box-shadow: 0 4px 0 #6a1a0e; font-size: 18px; }
+button.kucuk { padding: 4px 8px; font-size: 14px; }
+input, select { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 2px solid #9a7a4a; background: #fff8e8; color: #2a1608; }
+
+/* Ekranlar */
+.ekran { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 30%, #e8b070aa, #6a3a18ee); z-index: 20; }
+.kart { width: min(460px, 100%); background: #f3e2bd; border: 4px solid #6a4424; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 12px 40px #0008, inset 0 0 40px #c9a36a66; }
+.afis { background: #f0dcae url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23000' opacity='0.02'/%3E%3C/svg%3E"); }
+.afisUst { font-family: Rye, Georgia, serif; font-size: clamp(38px, 11vw, 58px); text-align: center; color: #5a1a0e; letter-spacing: 2px; border-bottom: 3px double #6a4424; padding-bottom: 4px; }
+h2 { margin: 0; font-family: Rye, Georgia, serif; color: #5a1a0e; }
+.alt { margin: 0; line-height: 1.4; }
+.satir { display: flex; gap: 8px; } .satir > * { flex: 1; }
+.durum { margin: 0; min-height: 1.2em; font-size: 14px; color: #7a2a10; text-align: center; }
+label { font-weight: 800; font-size: 14px; }
+.nasil summary { cursor: pointer; font-weight: 900; }
+.nasil ul { padding-left: 18px; margin: 8px 0 0; font-size: 14px; line-height: 1.45; }
+.kodKutu { font-size: 18px; } .kodKutu b { font-family: Rye, serif; font-size: 26px; letter-spacing: 3px; color: #5a1a0e; }
+#lobiListe { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+#lobiListe li { background: #fff4dc; border: 2px solid #c9a36a; border-radius: 8px; padding: 8px 10px; font-weight: 800; display: flex; justify-content: space-between; }
+#ayarlar { display: grid; gap: 6px; }
+#ayarlar label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#ayarlar select { padding: 6px 8px; }
+#sonucListe { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
+#sonucListe li { background: #fff4dc; border-radius: 8px; padding: 7px 10px; font-weight: 800; display: flex; justify-content: space-between; }
+
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; color: #fff; text-shadow: 0 1px 3px #000c; }
+#hud button { pointer-events: auto; }
+#ustSol { position: absolute; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); display: grid; gap: 4px; font-weight: 900; }
+#rolRozet { font-family: Rye, serif; font-size: 20px; padding: 4px 10px; border-radius: 8px; background: #0006; }
+#rolRozet.haydut { color: #7dff8a; } #rolRozet.serif { color: #ffd23f; } #rolRozet.olu { color: #ccc; }
+#sureYazi { font-size: 22px; } #gorevSayac, #hakYazi { font-size: 15px; }
+#akis { position: absolute; right: max(10px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 52px); width: min(330px, 58vw); display: grid; gap: 5px; }
+#akis div { background: #000a; border-left: 4px solid #ffd23f; padding: 6px 9px; border-radius: 6px; font-size: 14px; font-weight: 800; animation: gel .3s; }
+#akis div.iyi { border-color: #6ce07a; } #akis div.kotu { border-color: #ff5a4a; } #akis div.takim { border-color: #7dff8a; }
+#akis small { opacity: .8; font-weight: 700; margin-left: 4px; }
+@keyframes gel { from { transform: translateX(30px); opacity: 0; } }
+#toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-family: Rye, serif; font-size: clamp(20px, 5vw, 32px); text-align: center; opacity: 0; transition: opacity .3s; width: 90%; }
+#toast.goster { opacity: 1; }
+#harita { position: absolute; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); width: 150px; height: 150px; border: 3px solid #6a4424; border-radius: 8px; background: #d9a866; pointer-events: auto; box-shadow: 0 4px 14px #0007; }
+#harita.buyuk { width: min(86vw, 86vh); height: min(86vw, 86vh); left: 50%; bottom: 50%; transform: translate(-50%, 50%); z-index: 30; }
+#nisan { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 3px #000; }
+#nisan.serif { width: 26px; height: 26px; margin: -13px 0 0 -13px; background: none; border: 2px solid #fff; box-shadow: 0 0 3px #000, inset 0 0 3px #000; }
+#nisan.serif::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #ff4a3a; }
+#nisan.hedefte { border-color: #ff4a3a; }
+#ilerleme { position: absolute; left: 50%; bottom: 26%; transform: translateX(-50%); width: min(320px, 70vw); text-align: center; font-weight: 900; }
+#ilerleme div { height: 12px; background: #0008; border-radius: 6px; overflow: hidden; margin-top: 4px; border: 2px solid #fff8; }
+#ilerleme i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd23f, #ff8a2a); }
+#eylemBtn { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 70px); transform: translateX(-50%); background: #ffd23f; color: #3b2414; box-shadow: 0 4px 0 #9a7a1a; white-space: nowrap; max-width: 80vw; overflow: hidden; text-overflow: ellipsis; }
+#eylemBtn.kilik { background: #c9a0ff; box-shadow: 0 4px 0 #6a4a9a; }
+#sagTuslar { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); display: grid; gap: 10px; justify-items: end; }
+#sagTuslar button { width: 66px; height: 66px; border-radius: 50%; font-size: 28px; padding: 0; background: #0007; color: #fff; box-shadow: 0 0 0 3px #fff6; }
+#atesBtn { width: 84px !important; height: 84px !important; font-size: 36px !important; background: #b5321ecc !important; }
+#muhbirBtn.aktif { box-shadow: 0 0 0 4px #ffd23f !important; }
+#kosBtn.basili { background: #ffd23f99 !important; }
+#ustSag { position: absolute; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); display: flex; gap: 6px; }
+#ustSag button { width: 42px; height: 42px; padding: 0; font-size: 20px; border-radius: 10px; background: #0007; color: #fff; box-shadow: none; }
+#ustSag button.kapali { opacity: .45; } #ustSag button.acik { background: #2a8a3acc; } #telsizBtn.acik { background: #d08a1acc; }
+#joystick { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: #fff2; border: 2px solid #fff5; display: none; }
+#joyTopuz { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px; border-radius: 50%; background: #fff8; }
+#elendiYazi { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); background: #000a; padding: 10px 16px; border-radius: 10px; text-align: center; font-weight: 900; width: min(420px, 90vw); }
+#ipucu { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 12px; opacity: .75; white-space: nowrap; }
+.dokunmatik { display: none; }
+body.dokun .dokunmatik { display: block; }
+body.dokun #ipucu { display: none; }
+@media (max-width: 600px) { #harita { width: 112px; height: 112px; } #akis div { font-size: 12px; } #sureYazi { font-size: 18px; } #rolRozet { font-size: 16px; } }

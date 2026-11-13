@@ -302,7 +302,8 @@
     if (e.code === 'KeyK') mikDegistir();
     if (e.code === 'KeyQ') nisanDegistir();
     if (!oyun.canli && e.code === 'Space' && !oyun.serbest) { e.preventDefault(); izlemeDegistir(1); }
-    if (!oyun.canli && e.code === 'KeyG') { oyun.serbest = !oyun.serbest; if (oyun.serbest) oyun.ruhY = oyun.y + 1.7; else oyun.izle = 0; izlemeYazisi(); }
+    // G: sadece ölen haydut ruh ↔ arkadaşını izle arasında geçer. Şerif hayalet olamaz (haydutları görüp ele verebilir).
+    if (!oyun.canli && e.code === 'KeyG' && oyun.rol === 'haydut') { oyun.serbest = !oyun.serbest; if (oyun.serbest) oyun.ruhY = oyun.y + 1.7; else oyun.izle = 0; izlemeYazisi(); }
     if (e.code === 'KeyL') $('gorevListe').classList.toggle('gizli');
     // Alt: fareyi serbest bırak (mikrofon vb. tuşlara tıklamak için). ESC de aynı işi yapar.
     if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); if (document.pointerLockElement) document.exitPointerLock(); }
@@ -592,11 +593,16 @@
     if (!oyun || oyun.canli) return;
     const no = izlenen();
     const alt = no != null
-      ? `👁️ <b>${kacis(izlenenAd(no))}</b> gözünden izliyorsun · ${dokun ? 'dokun: sıradaki' : 'Boşluk: sıradaki · G: serbest dolaş'}`
+      ? `👁️ <b>${kacis(izlenenAd(no))}</b> gözünden izliyorsun · ${oyun.rol === 'serif' ? (dokun ? 'dokun: sıradaki şerif' : 'Boşluk: sıradaki şerif') : (dokun ? 'dokun: ruh ol' : 'Boşluk: sıradaki · G: ruh olup uç')}`
+      : oyun.rol === 'serif' ? '👁️ İzlenecek şerif kalmadı'
       : `👻 Ruh oldun: kimse seni görmez, istediğin yere uç${dokun ? '' : ' · WASD + fare · Boşluk yukarı · C aşağı · Shift hızlı'}${izlenebilenler().length && !dokun ? ' · G: arkadaşının gözünden izle' : ''}`;
     $('elendiYazi').innerHTML = `${oyun.elenmeYazi}<br><small>${alt}<br>Ölüler sadece ölüleri duyar.</small>`;
   }
-  function izlemeDegistir(adim) { if (!oyun || oyun.canli) return; oyun.serbest = false; oyun.izle += adim; izlemeYazisi(); }
+  function izlemeDegistir(adim) {
+    if (!oyun || oyun.canli) return;
+    if (oyun.rol === 'haydut' && dokun && izlenebilenler().length) { oyun.serbest = !oyun.serbest; if (oyun.serbest) oyun.ruhY = oyun.y + 1.7; izlemeYazisi(); return; }   // telefonda dokunmak: ruh ↔ izle
+    oyun.serbest = false; oyun.izle += adim; izlemeYazisi();
+  }
   $('elendiYazi').addEventListener('click', () => izlemeDegistir(1));
   function bitti(m) {
     const benimRol = oyun.rol, kazandim = m.kazanan === benimRol;
@@ -750,6 +756,7 @@
 
   function hareket(dt) {
     if (!oyun.canli && oyun.serbest) { ruhUcusu(dt); return; }
+    if (!oyun.canli && oyun.rol === 'serif') { oyun.h = 0; return; }   // elenen şerif sadece izler, gezemez
     let ileri = 0, yan = 0;
     if (tuslar.has('KeyW') || tuslar.has('ArrowUp')) ileri += 1;
     if (tuslar.has('KeyS') || tuslar.has('ArrowDown')) ileri -= 1;

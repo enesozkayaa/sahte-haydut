@@ -1,5 +1,5 @@
 // =============================================================
-// Aranıyor! - oyun sesleri (dosya yok, tarayıcı kendisi üretir). Sesli sohbet ayrı (ag.js).
+// Sahte Haydut - oyun sesleri (dosya yok, tarayıcı kendisi üretir). Sesli sohbet ayrı (ag.js).
 // =============================================================
 
 const Ses = (() => {

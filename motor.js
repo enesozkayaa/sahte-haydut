@@ -1,5 +1,5 @@
 // =============================================================
-// Aranıyor! - oyun kuralları (sadece odayı açan "ev"de çalışır)
+// Sahte Haydut - oyun kuralları (sadece odayı açan "ev"de çalışır)
 // Kasabalıları yürütür, görevleri/atışları/kılık değiştirmeyi işler, kazananı bulur.
 // Herkes kasabada bir "varlık"tır; varlık numaraları karışıktır, kimin oyuncu olduğu numaradan anlaşılmaz.
 // =============================================================

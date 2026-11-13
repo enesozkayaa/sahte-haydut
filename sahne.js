@@ -1,5 +1,5 @@
 // =============================================================
-// Aranıyor! - 3D kasaba sahnesi (Three.js) ve küçük harita çizimi
+// Sahte Haydut - 3D kasaba sahnesi (Three.js) ve küçük harita çizimi
 // =============================================================
 
 const Sahne = (() => {

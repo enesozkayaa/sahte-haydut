@@ -1,5 +1,5 @@
 // =============================================================
-// Aranıyor! - 10 insan karakter (Three.js kutularından), yürüme animasyonu, takım çizgisi
+// Sahte Haydut - 10 insan karakter (Three.js kutularından), yürüme animasyonu, takım çizgisi
 // Karakter +z yönüne bakar; grup.rotation.y = yön.
 // =============================================================
 

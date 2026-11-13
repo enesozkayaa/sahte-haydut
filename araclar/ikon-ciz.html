@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Aranıyor! - uygulama simgesi (eski "aranıyor" afişi). Adres sonuna ?boyut=512 yazılır.
+  Sahte Haydut - uygulama simgesi (eski "aranıyor" afişi). Adres sonuna ?boyut=512 yazılır.
   PNG için: msedge --headless=new --user-data-dir=<geçici klasör> --hide-scrollbars --window-size=512,512 --screenshot=ikonlar/ikon-512.png "file:///.../araclar/ikon-ciz.html?boyut=512"
 -->
 <html>
@@ -22,7 +22,7 @@
   const kenar = g.createRadialGradient(0, 0, 120, 0, 0, 280); kenar.addColorStop(0, 'rgba(0,0,0,0)'); kenar.addColorStop(1, 'rgba(120,70,20,0.45)');
   g.fillStyle = kenar; g.fillRect(-170, -205, 340, 410);
   g.fillStyle = '#5a1a0e'; g.textAlign = 'center';
-  g.font = 'bold 50px Georgia, serif'; g.fillText('ARANIYOR', 0, -150, 300);
+  g.font = 'bold 46px Georgia, serif'; g.fillText('SAHTE HAYDUT', 0, -158, 310);
   // Kovboy silüeti
   g.fillStyle = '#3b2414';
   g.beginPath(); g.ellipse(0, -20, 56, 66, 0, 0, 7); g.fill();                     // baş
@@ -31,7 +31,7 @@
   g.beginPath(); g.moveTo(-120, 120); g.quadraticCurveTo(-100, 40, 0, 45); g.quadraticCurveTo(100, 40, 120, 120); g.lineTo(120, 140); g.lineTo(-120, 140); g.fill();
   g.fillStyle = '#b8222c'; g.beginPath(); g.moveTo(-50, 20); g.lineTo(50, 20); g.lineTo(0, 70); g.fill();   // bandana
   g.fillStyle = '#f0dcae'; g.fillRect(-36, -30, 22, 8); g.fillRect(14, -30, 22, 8);                            // gözler
-  g.fillStyle = '#5a1a0e'; g.font = 'bold 38px Georgia, serif'; g.fillText('$ 5000', 0, 186);
+  g.fillStyle = '#5a1a0e'; g.font = 'bold 40px Georgia, serif'; g.fillText('ARANIYOR', 0, 186, 300);
   g.restore();
   // Çivi
   g.fillStyle = '#9a9a9a'; g.beginPath(); g.arc(256, 70, 9, 0, 7); g.fill();

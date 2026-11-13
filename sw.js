@@ -1,9 +1,9 @@
 // =============================================================
-// Aranıyor! - servis çalışanı (ana ekrana ekleme + çevrimdışı kopya)
+// Sahte Haydut - servis çalışanı (ana ekrana ekleme + çevrimdışı kopya)
 // Oyunu güncelleyip yüklerken ONBELLEK numarasını 1 artır.
 // =============================================================
 
-const ONBELLEK = 'araniyor-v1';
+const ONBELLEK = 'sahte-haydut-v1';
 const DOSYALAR = [
   './', 'index.html', 'style.css', 'kasaba.js', 'karakter.js', 'sahne.js', 'ag.js', 'ses.js', 'motor.js', 'oyun.js',
   'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',
@@ -14,7 +14,7 @@ self.addEventListener('install', olay => {
   self.skipWaiting();
 });
 self.addEventListener('activate', olay => {
-  olay.waitUntil(caches.keys().then(adlar => Promise.all(adlar.filter(a => a.startsWith('araniyor-') && a !== ONBELLEK).map(a => caches.delete(a)))));
+  olay.waitUntil(caches.keys().then(adlar => Promise.all(adlar.filter(a => a.startsWith('sahte-haydut-') && a !== ONBELLEK).map(a => caches.delete(a)))));
   self.clients.claim();
 });
 // Önce internet (en yeni sürüm), olmazsa kayıtlı kopya

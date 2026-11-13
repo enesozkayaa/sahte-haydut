@@ -1,5 +1,5 @@
 // =============================================================
-// Aranıyor! - kasaba haritası: binalar, görevler, kılık noktaları, yürüme ağı
+// Sahte Haydut - kasaba haritası: binalar, görevler, kılık noktaları, yürüme ağı
 // Herkeste aynı (rastgele değil). Koordinatlar metre: x doğu (+), z güney (+).
 // =============================================================
 

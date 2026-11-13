@@ -1,12 +1,12 @@
 // =============================================================
-// Aranıyor! - online oda (PeerJS) ve sesli sohbet
+// Sahte Haydut - online oda (PeerJS) ve sesli sohbet
 // Odayı açan "ev"dir: kasabalıları o yürütür, kuralları o işletir. Diğerleri evle konuşur.
 // Ses: mikrofonu açık herkes birbirine bağlanır; kimin kimi ne kadar duyacağını
 // (yakınlık, telsiz, ölüler) ev hesaplar ve herkese ses seviyesi tablosu yollar.
 // =============================================================
 
 const Ag = (() => {
-  const ODA_ONEKI = 'araniyor-oda-';
+  const ODA_ONEKI = 'sahtehaydut-oda-';
   const KOD_HARF = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
   const NABIZ = 2000, ZAMAN_ASIMI = 15000;
   const ag = { peer: null, mod: null, kod: null, benimId: null, oyuncular: [], baglantilar: new Map(), ev: null, sonEv: 0 };

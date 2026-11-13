@@ -1,5 +1,5 @@
 // =============================================================
-// Aranıyor! - oyuncunun ekranı: giriş/lobi, kamera, yürüme, ateş, görev, harita, bildirim, ses
+// Sahte Haydut - oyuncunun ekranı: giriş/lobi, kamera, yürüme, ateş, görev, harita, bildirim, ses
 // =============================================================
 
 (() => {

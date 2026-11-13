@@ -4,7 +4,7 @@
 
 (() => {
   const $ = id => document.getElementById(id);
-  const dokun = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  const dokun = matchMedia('(pointer: coarse)').matches;   // sadece parmakla kullanılan cihaz (dokunmatik dizüstü fareyle oynar)
   if (dokun) document.body.classList.add('dokun');
   const YURU = 1.6, KOS = 4.6, HAYALET = 7;
   const SERIF_RENK = '#ffc61a', TAKIM_RENK = '#33ff55';
@@ -54,7 +54,8 @@
     $('lobiDurum').textContent = ev ? 'Arkadaşların kodla katılsın. En az 2 kişi gerekli.' : 'Oda sahibi oyunu başlatacak…';
   });
   Ag.kabulKurali(n => n >= 10 ? 'Oda dolu (en fazla 10 kişi).' : (Motor.aktif ? 'Oyun sürüyor. Bitince tekrar dene.' : true));
-  Ag.on('oyuncular', liste => {
+  Ag.on('oyuncular', liste => lobiListesi(liste));
+  function lobiListesi(liste) {
     const secimli = lobiAyar.rolMod !== 'rastgele';
     const rolYazi = o => !secimli ? '' : o.rol === 'haydut' ? '🦹 Haydut' : o.rol === 'serif' ? '⭐ Şerif' : '❔ seçmedi';
     $('lobiListe').innerHTML = liste.map((o, i) => `<li><span>${i === 0 ? '👑 ' : '🤠 '}${kacis(o.ad)}${o.id === Ag.benimId ? ' (sen)' : ''}</span><span>${rolYazi(o)} ${o.ses ? '🎤' : ''}</span></li>`).join('');
@@ -66,7 +67,7 @@
       $('baslaBtn').disabled = n < 2;
       ayarYay(true);
     }
-  });
+  }
   // Rol seçimi (bekleme odasında herkes kendi seçer)
   let lobiAyar = { rolMod: 'secim' };
   function rolDugmeleri() {
@@ -79,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayKasabali', 'ayKilik'].forEach(id => $(id).addEventListener('change', ayarYay));
+  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayKasabali', 'ayKilik'].forEach(id => $(id).addEventListener('change', () => ayarYay()));
   function ayarOku() {
     return { rolMod: $('ayRolMod').value, haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value };
   }
@@ -88,7 +89,7 @@
     if (!Ag.evMi) return;
     const a = ayarOku(), degisti = a.rolMod !== lobiAyar.rolMod; lobiAyar = a;
     $('ayarOzet').textContent = ayarYazi(a); Ag.yayinla({ tip: 'ayar', ayar: a });
-    if (degisti && !listedenGeldi) Ag.lobiYay(); else rolDugmeleri();
+    if (degisti && !listedenGeldi) lobiListesi(Ag.oyuncular); else rolDugmeleri();
   }
 
   $('kodKopyalaBtn').onclick = () => {
@@ -110,14 +111,21 @@
   $('baslaBtn').onclick = () => {
     if (!Ag.evMi || Ag.oyuncular.length < 2) return;
     sonAyar = ayarOku();
-    if (sonAyar.rolMod !== 'rastgele') {
-      const secmeyen = Ag.oyuncular.filter(o => !o.rol).map(o => o.ad);
-      if (secmeyen.length) { $('lobiDurum').textContent = `Herkes rolünü seçsin: ${secmeyen.join(', ')} seçmedi.`; return; }
-      if (!Ag.oyuncular.some(o => o.rol === 'haydut')) { $('lobiDurum').textContent = 'En az 1 kişi haydut olmalı.'; return; }
-      if (!Ag.oyuncular.some(o => o.rol === 'serif')) { $('lobiDurum').textContent = 'En az 1 kişi şerif olmalı.'; return; }
-    }
+    if (!rollerHazir()) return;
     motoruBaslat();
   };
+  // Roller seçimle dağıtılıyorsa: herkes seçmiş olmalı, en az 1 haydut ve 1 şerif
+  function rollerHazir() {
+    const a = ayarOku();
+    if (a.rolMod === 'rastgele') return true;
+    const secmeyen = Ag.oyuncular.filter(o => !o.rol).map(o => o.ad);
+    let neden = '';
+    if (secmeyen.length) neden = `Herkes rolünü seçsin: ${secmeyen.join(', ')} seçmedi.`;
+    else if (!Ag.oyuncular.some(o => o.rol === 'haydut')) neden = 'En az 1 kişi haydut olmalı.';
+    else if (!Ag.oyuncular.some(o => o.rol === 'serif')) neden = 'En az 1 kişi şerif olmalı.';
+    $('lobiDurum').textContent = neden;
+    return !neden;
+  }
   function motoruBaslat() {
     clearInterval(motorSayac);
     Motor.baslat(Ag.oyuncular.map(o => ({ id: o.id, ad: o.ad, rol: o.rol })), sonAyar, {
@@ -125,7 +133,11 @@
       herkese: m => Ag.yayinla(m),
     });
     let son = performance.now();
-    motorSayac = setInterval(() => { const t = performance.now(); Motor.adim(Math.min(0.3, (t - son) / 1000)); son = t; }, 100);
+    motorSayac = setInterval(() => {
+      const t = performance.now(), dt = Math.min(2, (t - son) / 1000); son = t;
+      const n = Math.max(1, Math.ceil(dt / 0.15));   // sekme arka plandaysa zamanlayıcı yavaşlar: kaçırılan süreyi parça parça işle
+      for (let i = 0; i < n; i++) Motor.adim(dt / n);
+    }, 100);
   }
   Ag.on('evMesaj', (m, id) => {
     if (m.tip === 'lobiyeDon') return;
@@ -138,7 +150,7 @@
     Motor.girdi(id, m);
   });
   Ag.on('koptu', o => Motor.koptu(o.id));
-  $('tekrarBtn').onclick = () => { if (Ag.evMi && Ag.oyuncular.length >= 2) motoruBaslat(); };
+  $('tekrarBtn').onclick = () => { if (!Ag.evMi || Ag.oyuncular.length < 2) return; if (!rollerHazir()) { ekran('lobi'); Ag.yayinla({ tip: 'lobi' }); return; } motoruBaslat(); };
   $('lobiyeBtn').onclick = () => {
     if (Ag.evMi) { clearInterval(motorSayac); Motor.durdur(); Ag.yayinla({ tip: 'lobi' }); }
     else { oyunuTemizle(); ekran('lobi'); }
@@ -148,12 +160,15 @@
   Ag.on('mesaj', mesaj);
   function mesaj(m) {
     switch (m.tip) {
-      case 'ayar': if (!Ag.evMi) { $('ayarOzet').textContent = ayarYazi(m.ayar); lobiAyar = m.ayar; rolDugmeleri(); } break;
+      case 'ayar': if (!Ag.evMi) { const degisti = m.ayar.rolMod !== lobiAyar.rolMod; $('ayarOzet').textContent = ayarYazi(m.ayar); lobiAyar = m.ayar; if (degisti) lobiListesi(Ag.oyuncular); else rolDugmeleri(); } break;
       case 'basla': oyunBaslat(m); break;
       case 'd': if (oyun) konumlar(m); break;
       case 'is': if (oyun) isDurumu(m); break;
       case 'bildirim': if (oyun) bildirim(m); break;
-      case 'bilgi': if (oyun) { akisEkle(m.metin, m.tur); if (m.tur === 'iyi') Ses.iyi(); else if (m.tur === 'kotu') Ses.kotu(); } break;
+      case 'bilgi': if (oyun) {
+        const tur = oyun.rol === 'haydut' ? ({ iyi: 'kotu', kotu: 'iyi' }[m.tur] || m.tur) : m.tur;   // haber benim takımım için iyi mi kötü mü
+        akisEkle(m.metin, tur); if (tur === 'iyi') Ses.iyi(); else if (tur === 'kotu') Ses.kotu();
+      } break;
       case 'ates': if (oyun) atesGoster(m); break;
       case 'hak': if (oyun) { oyun.hak = m.hak; hudGuncelle(); } break;
       case 'muhbir': if (oyun) { oyun.muhbirAktif = m.aktif; if (m.aktif) oyun.muhbir = 0; hudGuncelle(); } break;
@@ -195,6 +210,7 @@
       gorevSayi: 0, yapilan: new Set(), gorunen: new Set(), kalanHakki: 1, kalan: m.sure, sonGonder: 0, sonAtes: 0, darbe: [],
     };
     $('akis').innerHTML = '';
+    $('telsizBtn').classList.remove('acik'); $('kosBtn').classList.remove('basili'); $('nisanBtn').classList.remove('basili');
     $('elendiYazi').classList.add('gizli');
     $('ilerleme').classList.add('gizli');
     $('harita').classList.remove('buyuk');
@@ -226,8 +242,8 @@
     oyun.kapiAcik = true; Kasaba.odaKapisi(false); Sahne.serifKapisi(true);
     $('bekleYazi').classList.add('gizli');
     toast(oyun.rol === 'serif' ? '🚪 Kapı açıldı! Haydutları bul!' : '🚪 Şerifler kasabaya çıktı!', 2500);
-    akisEkle('🚪 Şerifler odadan çıktı', 'kotu');
-    Ses.hapis();
+    akisEkle('🚪 Şerifler odadan çıktı', oyun.rol === 'serif' ? 'iyi' : 'kotu');
+    if (oyun.rol === 'serif') Ses.iyi(); else Ses.kotu();
   }
   // Kapı açılana kadar üstte geri sayım
   function bekleGuncelle(t) {
@@ -237,6 +253,7 @@
     y.textContent = oyun.rol === 'serif' ? `🔒 Odadasın · kapı ${kalan} sn sonra açılacak` : `🔒 Şerifler ${kalan} sn sonra çıkacak · kalabalığa karış!`;
   }
   function oyunuTemizle() {
+    clearTimeout(sonucSayac);
     varliklar.forEach(v => Sahne.scene?.remove(v.g)); varliklar.clear();
     isaretler.forEach(s => Sahne.scene?.remove(s)); isaretler.length = 0;
     lazerler.forEach(l => Sahne.scene?.remove(l.cizgi, l.nokta)); lazerler.clear();
@@ -293,6 +310,7 @@
   addEventListener('keydown', e => {
     if (!oyun || e.target.tagName === 'INPUT') return;
     tuslar.add(e.code);
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); document.activeElement?.blur?.(); }   // odaklı düğmeye basılmasın
     if (e.repeat) return;
     if (e.code === 'KeyE') eylem();
     if (e.code === 'KeyV') kameraDegistir();
@@ -476,7 +494,7 @@
   // Işın: (o, d) yönünde ilk çarptığı karakter ve mesafe. tabanY: atanın bulunduğu kat yüksekliği
   function isinAt(ox, oy, oz, d, haric, tabanY) {
     const l2 = Math.hypot(d.x, d.z) || 1e-6;
-    let et = Math.min(Kasaba.isin(ox, oz, d.x / l2, d.z / l2, 60, Kasaba.katOf(tabanY)) / l2, 50 / l2);
+    let et = Math.min(Kasaba.isin(ox, oz, d.x / l2, d.z / l2, 60, Kasaba.katOf(tabanY)) / l2, 44 / l2);   // evin kabul ettiği menzil 45 m
     if (d.y < -0.01) et = Math.min(et, (oy - tabanY) / -d.y);          // yere çarpar
     let en = -1;
     varliklar.forEach((v, no) => {
@@ -544,7 +562,7 @@
   function ates() {
     if (!oyun || oyun.rol !== 'serif' || !oyun.canli) return;
     if (!oyun.kapiAcik) { toast('🔒 Kapı açılmadan ateş edemezsin', 1200); return; }
-    const t = performance.now(); if (t - oyun.sonAtes < 1800) return;
+    const t = performance.now(); if (t - oyun.sonAtes < 1900) return;
     oyun.sonAtes = t;
     Ag.eveGonder({ tip: 'ates', hedef: nisanHedefi() });
   }
@@ -601,14 +619,17 @@
   function izlemeDegistir(adim) {
     if (!oyun || oyun.canli) return;
     if (oyun.rol === 'haydut' && dokun && izlenebilenler().length) { oyun.serbest = !oyun.serbest; if (oyun.serbest) oyun.ruhY = oyun.y + 1.7; izlemeYazisi(); return; }   // telefonda dokunmak: ruh ↔ izle
+    if (oyun.rol === 'haydut' && !izlenebilenler().length) { oyun.serbest = true; izlemeYazisi(); return; }   // izlenecek kimse yok: ruh kal
     oyun.serbest = false; oyun.izle += adim; izlemeYazisi();
   }
   $('elendiYazi').addEventListener('click', () => izlemeDegistir(1));
+  let sonucSayac = null;
   function bitti(m) {
     const benimRol = oyun.rol, kazandim = m.kazanan === benimRol;
     if (kazandim) Ses.kazandi(); else Ses.kaybetti();
     toast(m.kazanan === 'haydut' ? '🦹 HAYDUTLAR KAZANDI!' : '⭐ ŞERİFLER KAZANDI!', 3000);
-    setTimeout(() => {
+    clearTimeout(sonucSayac);
+    sonucSayac = setTimeout(() => {
       $('sonucBaslik').textContent = m.kazanan === 'haydut' ? 'HAYDUTLAR KAZANDI' : 'ŞERİFLER KAZANDI';
       $('sonucNeden').textContent = `${m.neden} (${m.gorev} görev yapıldı)`;
       const durum = d => d === 0 ? '🙂 Ayakta' : d === 1 ? '💀 Vuruldu' : d === 2 ? '⛓️ Hapiste' : '🚪 Ayrıldı';
@@ -624,7 +645,7 @@
     if (!oyun) return;
     const r = $('rolRozet');
     r.className = oyun.canli ? oyun.rol : 'olu';
-    r.textContent = !oyun.canli ? '👻 Hayalet' : oyun.rol === 'haydut' ? '🦹 HAYDUT' : '⭐ ŞERİF';
+    r.textContent = !oyun.canli ? (oyun.rol === 'haydut' ? '👻 Ruh' : oyun.hak <= 0 ? '⛓️ Hapiste' : '💀 Elendin') : oyun.rol === 'haydut' ? '🦹 HAYDUT' : '⭐ ŞERİF';
     $('gorevSayac').textContent = `🎯 Görev: ${oyun.gorevSayi}/${oyun.ayar.hedef}`;
     gorevListesi();
     $('hakYazi').textContent = oyun.rol === 'serif' ? `🔫 Hak: ${oyun.hak}` : `👔 Kılık: ${oyun.kilik}`;
@@ -650,7 +671,7 @@
   function kalanlariGoster() {
     if (!oyun || oyun.rol !== 'haydut' || oyun.kalanHakki <= 0) return;
     oyun.kalanHakki = 0; oyun.gorunen = new Set(oyun.yapilan);
-    toast(`🔍 ${Kasaba.gorevler.length - oyun.gorunen.size} görev kaldı`, 2000); hudGuncelle();
+    toast(`🔍 ${oyun.aktif.size - [...oyun.gorunen].filter(g => oyun.aktif.has(g)).length} görev kaldı`, 2000); hudGuncelle();
   }
   function postaListesi(ids) {
     oyun.gorunen = new Set(ids);
@@ -770,7 +791,7 @@
       if (boy > 1) { ileri /= boy; yan /= boy; }
       const s = Math.sin(oyun.yaw), c = Math.cos(oyun.yaw);
       const mx = s * ileri - c * yan, mz = c * ileri + s * yan, ml = Math.hypot(mx, mz);
-      if (oyun.canli && oyun.is) Ag.eveGonder({ tip: 'iptal' });
+      if (oyun.canli && oyun.is && !oyun.is.iptalGitti) { oyun.is.iptalGitti = true; Ag.eveGonder({ tip: 'iptal' }); }
       const hiz = !oyun.canli ? HAYALET : kos ? KOS : YURU;
       const nx = oyun.x + mx / ml * hiz * dt * Math.min(1, boy), nz = oyun.z + mz / ml * hiz * dt * Math.min(1, boy);
       if (oyun.canli) { const p = Kasaba.it(nx, nz, 0.35, Kasaba.katOf(oyun.y)); oyun.x = p.x; oyun.z = p.z; oyun.y = Kasaba.zeminY(p.x, p.z, oyun.y); }

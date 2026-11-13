@@ -92,3 +92,30 @@ label { font-weight: 800; font-size: 14px; }
 body.dokun .dokunmatik { display: block; }
 body.dokun #ipucu { display: none; }
 @media (max-width: 600px) { #harita { width: 140px; height: 140px; } #akis div { font-size: 12px; } #sureYazi { font-size: 18px; } #rolRozet { font-size: 16px; } }
+
+/* Telefon yan tutulunca (alçak ekran): harita ve yazılar küçülsün, birbirine binmesin */
+@media (max-height: 500px) {
+  #harita { width: 118px; height: 118px; }
+  #harita.buyuk { width: min(260px, 70vh); height: min(260px, 70vh); }
+  #ustSol { gap: 2px; } #rolRozet { font-size: 14px; padding: 2px 8px; } #sureYazi { font-size: 15px; } #gorevSayac, #hakYazi { font-size: 12px; }
+  #gorevPanel { top: calc(max(6px, env(safe-area-inset-top)) + 88px); max-width: 190px; }
+  #gorevPanel > button { padding: 3px 8px; font-size: 12px; }
+  #gorevListe { max-height: calc(100vh - 250px); font-size: 11px; }
+  #bekleYazi { font-size: 14px; top: calc(max(6px, env(safe-area-inset-top)) + 34px); padding: 4px 10px; left: 60%; }
+  #serifPanel span { font-size: 11px; padding: 2px 5px; }
+  #toast { font-size: 20px; top: 30%; }
+  #akis { width: min(260px, 40vw); top: calc(max(6px, env(safe-area-inset-top)) + 46px); } #akis div { font-size: 11px; padding: 4px 7px; }
+  #sagTuslar button { width: 54px; height: 54px; font-size: 24px; } #atesBtn { width: 68px !important; height: 68px !important; font-size: 30px !important; }
+  #ustSag button { width: 36px; height: 36px; font-size: 17px; }
+  #eylemBtn { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 8px); font-size: 14px; padding: 8px 12px; }
+  #elendiYazi { font-size: 12px; top: calc(max(6px, env(safe-area-inset-top)) + 34px); }
+}
+
+/* Telefon dik tutulunca (dar ekran): üstteki paneller sırayla alt alta */
+@media (max-width: 600px) and (min-height: 501px) {
+  #serifPanel { top: calc(max(8px, env(safe-area-inset-top)) + 50px); max-width: 92vw; }
+  #akis { top: calc(max(8px, env(safe-area-inset-top)) + 84px); width: 52vw; }
+  #gorevPanel { top: calc(max(10px, env(safe-area-inset-top)) + 122px); }
+  #bekleYazi { top: calc(max(8px, env(safe-area-inset-top)) + 84px); font-size: 14px; white-space: normal; width: 80vw; }
+  #elendiYazi { top: calc(max(8px, env(safe-area-inset-top)) + 84px); width: 86vw; }
+}

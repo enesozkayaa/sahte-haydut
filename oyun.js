@@ -319,9 +319,11 @@
     oyun.yaw -= e.movementX * 0.0024; oyun.pitch = Math.max(-1.25, Math.min(1.1, oyun.pitch - e.movementY * 0.0024));
   });
   document.addEventListener('mousedown', e => {
-    if (!oyun || document.pointerLockElement !== kanvas || oyun.rol !== 'serif') return;
-    if (e.button === 0) ates();
-    if (e.button === 2) nisanAyarla(true);    // sağ tık basılıyken nişan lazeri
+    if (!oyun || oyun.rol !== 'serif') return;
+    const kilitli = document.pointerLockElement === kanvas;
+    if (e.button === 0 && kilitli) ates();
+    // sağ tık basılıyken nişan lazeri (fare kilitli olmasa da, oyun ekranına basınca çalışır)
+    if (e.button === 2 && (kilitli || e.target === kanvas)) nisanAyarla(true);
   });
   document.addEventListener('mouseup', e => { if (oyun && e.button === 2) nisanAyarla(false); });
   kanvas.addEventListener('contextmenu', e => e.preventDefault());

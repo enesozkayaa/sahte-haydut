@@ -32,11 +32,14 @@ const Karakter = (() => {
     const g = new THREE.Group();
     const govdeG = new THREE.Group(); g.add(govdeG);
     const gen = t.gen || 1, inc = t.ince ? 0.9 : 1;
-    // Bacaklar (kalçadan döner)
+    // Bacaklar: kalçadan döner, dizden bükülür (uyluk + diz + baldır + çizme)
     const bacak = s => {
       const p = new THREE.Group(); p.position.set(0.12 * s * gen, 0.86, 0); govdeG.add(p);
-      parca(kutu(0.17 * inc, 0.74, 0.2), t.pantolon || '#333', 0, -0.37, 0, p);
-      parca(kutu(0.19, 0.12, 0.28), '#2b1a10', 0, -0.8, 0.04, p);   // çizme
+      parca(kutu(0.17 * inc, 0.42, 0.2), t.pantolon || '#333', 0, -0.2, 0, p);
+      const diz = new THREE.Group(); diz.position.set(0, -0.4, 0); p.add(diz);
+      parca(kutu(0.16 * inc, 0.36, 0.19), t.pantolon || '#333', 0, -0.17, 0, diz);
+      parca(kutu(0.19, 0.12, 0.28), '#2b1a10', 0, -0.4, 0.04, diz);   // çizme
+      p.userData.diz = diz;
       return p;
     };
     const bacakL = bacak(1), bacakR = bacak(-1);
@@ -60,15 +63,20 @@ const Karakter = (() => {
       parca(kutu(0.1, 0.24, 0.12), '#3a2210', 0.32 * gen, 0.8, 0.03, govdeG);
     }
     // Kollar (omuzdan döner)
+    // Kollar: omuzdan döner, dirsekten bükülür
     const kol = s => {
       const p = new THREE.Group(); p.position.set(0.33 * s * gen * inc, 1.48, 0); govdeG.add(p);
-      parca(kutu(0.14, 0.6, 0.16), t.ciplakKol ? t.ten : t.gomlek, 0, -0.29, 0, p);
-      parca(kutu(0.12, 0.1, 0.12), t.ten, 0, -0.63, 0, p);
+      const renk = t.ciplakKol ? t.ten : t.gomlek;
+      parca(kutu(0.14, 0.33, 0.16), renk, 0, -0.16, 0, p);
+      const dirsek = new THREE.Group(); dirsek.position.set(0, -0.31, 0); p.add(dirsek);
+      parca(kutu(0.13, 0.28, 0.15), renk, 0, -0.13, 0, dirsek);
+      parca(kutu(0.12, 0.1, 0.12), t.ten, 0, -0.32, 0, dirsek);
+      p.userData.dirsek = dirsek;
       return p;
     };
     const kolL = kol(1), kolR = kol(-1);
-    if (t.baston) { const b = parca(silindir(0.025, 0.025, 0.9, 6), '#5a3a1a', 0, -0.95, 0.06, kolR); b.rotation.x = 0.1; }
-    if (serif) tabancaEkle(kolR);
+    if (t.baston) { const b = parca(silindir(0.025, 0.025, 0.9, 6), '#5a3a1a', 0, -0.64, 0.06, kolR.userData.dirsek); b.rotation.x = 0.1; }
+    if (serif) tabancaEkle(kolR.userData.dirsek);
     // Baş
     const bas = new THREE.Group(); bas.position.set(0, 1.72, 0); govdeG.add(bas);
     parca(kutu(0.3, 0.32, 0.3), t.ten, 0, 0, 0, bas);
@@ -105,7 +113,7 @@ const Karakter = (() => {
 
   // Altıpatlar tabanca: kabza elde, namlu kolun devamı yönünde (kol kalkınca ileri bakar)
   function tabancaEkle(kol) {
-    const t = new THREE.Group(); t.position.set(0, -0.66, 0.02); kol.add(t);
+    const t = new THREE.Group(); t.position.set(0, -0.35, 0.02); kol.add(t);
     parca(kutu(0.06, 0.11, 0.07), '#5a3418', 0, 0.02, 0, t);                                  // kabza
     const silindirG = parca(silindir(0.045, 0.045, 0.09, 8), '#3a3a42', 0, -0.07, 0.03, t);   // topaç
     silindirG.rotation.x = Math.PI / 2;
@@ -139,30 +147,50 @@ const Karakter = (() => {
       u.govdeG.rotation.x = -Math.PI / 2 * u.olum; u.govdeG.position.y = 0.15 * u.olum;
       return;
     }
-    if (h === 3) {   // görev yapıyor: kollar önde, elleri bir şeyle uğraşıyor
+    const yum = (a, b, k = 12) => a + (b - a) * Math.min(1, dt * k);
+    const dizL = u.bacakL.userData.diz, dizR = u.bacakR.userData.diz;
+    const dirL = u.kolL.userData.dirsek, dirR = u.kolR.userData.dirsek;
+    if (h === 3) {   // görev yapıyor: kollar önde, dirsekler bükük, elleri bir şeyle uğraşıyor
       u.faz += dt * 9;
-      const yum = (a, b) => a + (b - a) * Math.min(1, dt * 10);
-      u.bacakL.rotation.x = yum(u.bacakL.rotation.x, 0); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, 0);
-      u.kolL.rotation.x = yum(u.kolL.rotation.x, -1.05 + Math.sin(u.faz) * 0.3);
-      if (!u.serif) u.kolR.rotation.x = yum(u.kolR.rotation.x, -1.05 - Math.sin(u.faz) * 0.3);
-      u.govdeG.rotation.x = yum(u.govdeG.rotation.x, 0.12); u.govdeG.position.y = 0;
+      u.bacakL.rotation.x = yum(u.bacakL.rotation.x, 0, 10); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, 0, 10);
+      dizL.rotation.x = yum(dizL.rotation.x, 0.08, 10); dizR.rotation.x = yum(dizR.rotation.x, 0.08, 10);
+      u.kolL.rotation.x = yum(u.kolL.rotation.x, -0.75 + Math.sin(u.faz) * 0.25, 10); dirL.rotation.x = yum(dirL.rotation.x, -0.7 + Math.cos(u.faz) * 0.25, 10);
+      if (!u.serif) { u.kolR.rotation.x = yum(u.kolR.rotation.x, -0.75 - Math.sin(u.faz) * 0.25, 10); dirR.rotation.x = yum(dirR.rotation.x, -0.7 - Math.cos(u.faz) * 0.25, 10); }
+      u.govdeG.rotation.x = yum(u.govdeG.rotation.x, 0.12, 10); u.govdeG.position.y = 0;
       return;
     }
-    const hiz = h === 2 ? 13 : h === 1 ? 7.5 : 0, gen = h === 2 ? 0.95 : 0.55;
+    // Adım döngüsü: f ilerledikçe bir bacak öne savrulur (dizi bükülerek kalkar), diğeri yere basıp geri iter
+    const kos = h === 2, hiz = kos ? 10.5 : h === 1 ? 7 : 0;
     if (hiz) u.faz += dt * hiz;
-    const hedef = hiz ? Math.sin(u.faz) * gen : 0;
-    const yumusak = (a, b) => a + (b - a) * Math.min(1, dt * 12);
-    u.bacakL.rotation.x = yumusak(u.bacakL.rotation.x, hedef);
-    u.bacakR.rotation.x = yumusak(u.bacakR.rotation.x, -hedef);
-    u.kolL.rotation.x = yumusak(u.kolL.rotation.x, -hedef * 0.8);
-    if (u.serif) {   // şerif tabancayı tutar; ateş edince kolunu kaldırıp nişan alır
+    const f = u.faz, sn = Math.sin(f), cs = Math.cos(f);
+    const A = kos ? 0.85 : 0.48;                 // kalça salınımı
+    const K = kos ? 1.55 : 0.85;                 // diz bükülmesi (öne savrulurken)
+    const kalcaL = hiz ? A * sn : 0, kalcaR = hiz ? -A * sn : 0;
+    // Diz: bacak öne savrulurken bükülür (kalça açısı azalırken), yere basarken neredeyse düz; koşarken arkada da kalkar
+    // (kalça açısı + = bacak geride; sol için öne savrulma cos<0 anında olur)
+    const dizHedefL = hiz ? K * Math.max(0, -cs) + (kos ? 0.35 * Math.max(0, sn) : 0.06) : 0;
+    const dizHedefR = hiz ? K * Math.max(0, cs) + (kos ? 0.35 * Math.max(0, -sn) : 0.06) : 0;
+    u.bacakL.rotation.x = yum(u.bacakL.rotation.x, kalcaL, 16); u.bacakR.rotation.x = yum(u.bacakR.rotation.x, kalcaR, 16);
+    dizL.rotation.x = yum(dizL.rotation.x, dizHedefL, 18); dizR.rotation.x = yum(dizR.rotation.x, dizHedefR, 18);
+    // Kollar bacaklara ters sallanır; dirsek yürürken hafif, koşarken çok bükük
+    const kolA = kos ? 0.9 : 0.45, dirsek = kos ? -1.35 : hiz ? -0.28 : -0.1;
+    u.kolL.rotation.x = yum(u.kolL.rotation.x, hiz ? -kolA * sn : 0);
+    dirL.rotation.x = yum(dirL.rotation.x, dirsek + (hiz ? -0.15 * Math.max(0, -sn) : 0));
+    if (u.serif) {   // şerif tabancayı tutar; ateş edince / nişan alınca kolunu kaldırıp düz uzatır
       u.atesT = Math.max(0, u.atesT - dt);
-      // nişandayken kol bakış açısıyla birlikte ileri uzanır
-      const kol = u.nisan != null ? -Math.PI / 2 - u.nisan : u.atesT > 0 ? -1.5 : -0.32 + hedef * 0.2;
-      u.kolR.rotation.x = u.atesT > 0.35 && u.nisan == null ? kol : yumusak(u.kolR.rotation.x, kol);
-    } else u.kolR.rotation.x = yumusak(u.kolR.rotation.x, hedef * 0.8);
-    u.govdeG.position.y = hiz ? Math.abs(Math.sin(u.faz)) * (h === 2 ? 0.08 : 0.03) : 0;
-    u.govdeG.rotation.x = yumusak(u.govdeG.rotation.x, h === 2 ? 0.18 : 0);
+      const nisanda = u.nisan != null || u.atesT > 0;
+      const kol = u.nisan != null ? -Math.PI / 2 - u.nisan : u.atesT > 0 ? -1.5 : -0.25 + (hiz ? kolA * 0.3 * sn : 0);
+      u.kolR.rotation.x = u.atesT > 0.35 && u.nisan == null ? kol : yum(u.kolR.rotation.x, kol);
+      dirR.rotation.x = yum(dirR.rotation.x, nisanda ? 0 : -0.35);
+    } else {
+      u.kolR.rotation.x = yum(u.kolR.rotation.x, hiz ? kolA * sn : 0);
+      dirR.rotation.x = yum(dirR.rotation.x, dirsek + (hiz ? -0.15 * Math.max(0, sn) : 0));
+    }
+    // Gövde: her adımda hafif iner-kalkar, koşarken öne eğilir ve hafif yana döner
+    const zipla = hiz ? Math.abs(cs) * (kos ? 0.09 : 0.035) - (kos ? 0.06 : 0.02) : 0;
+    u.govdeG.position.y = yum(u.govdeG.position.y, zipla, 20);
+    u.govdeG.rotation.x = yum(u.govdeG.rotation.x, kos ? 0.22 : hiz ? 0.04 : 0);
+    u.govdeG.rotation.y = yum(u.govdeG.rotation.y, hiz ? sn * (kos ? 0.1 : 0.05) : 0);
   }
 
   // Takım çizgisi: vücudu saran renkli kenar + duvar arkasındayken görünen gölge

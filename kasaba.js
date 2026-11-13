@@ -10,7 +10,7 @@ const Kasaba = (() => {
   const ARA = 8;               // ara sokak x -8..8
   const KAT_Y = 3.2;           // üst katın zemin yüksekliği
   // Görev hareketleri (karakter.js pozları). Ağda h = 10 + sıra
-  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye'];
+  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye', 'yas', 'ver', 'dua'];
   const animKodu = ad => 10 + Math.max(0, ANIMLER.indexOf(ad));
   const DUVAR = 0.4, KAPI = 2.2;
 
@@ -128,12 +128,20 @@ const Kasaba = (() => {
     G('atbesle', 'Ahırdaki atı besle', 'Ahırdaki at beslendi', '🥕', 4, icNokta('ahir', 3.2, -2), 'besle'),
     G('dans', 'Salonda dans et', 'Salonda biri dans etti', '💃', 5, icNokta('salon', -5.5, 3.5, 0, 0), 'dans'),
     G('yemek', 'Otelde yemek ye', 'Otelde biri yemek yedi', '🍽️', 5, icNokta('otel', -4, 1.6, 0, 0), 'ye'),
+    G('yas', 'Tabutun başında yas tut', 'Mezarlıkta biri yas tuttu', '⚰️', 5, { x: 42, z: 61.7, yon: Math.PI }, 'yas'),
+    G('rusvet', 'Barmene rüşvet ver', 'Salonda barmene rüşvet verildi', '💵', 4, icNokta('salon', 6.5, -1.9), 'ver'),
+    G('dua', 'Kilisede dua et', 'Kilisede biri dua etti', '🙏', 5, icNokta('kilise', 0, -5.2), 'dua'),
+    G('vergi', 'İlan tahtasına sahte vergi duyurusu as', 'İlan tahtasına sahte vergi duyurusu asıldı', '📢', 4, { x: -14, z: 8.3, yon: 0 }, 'uzan'),
+    G('icki', 'Salonun içkisini sulandır', 'Salonun içkisi sulandırıldı', '🍺', 4, icNokta('salon', 1.4, -1.9), 'dok'),
   ];
   // Berber ustası koltuğun arkasında durur (müşteri oturunca tıraş eder)
   const berberUsta = icNokta('berber', 2, -1.75);
+  const barmenYeri = icNokta('salon', 5.2, -4.7, 0, 0);   // barın arkasında, salona bakar
+  // Berber ustası, barmen ve mezarlıktaki tabut katıdır (içlerinden geçilmez)
+  engeller.push({ tur: 'kisi', x: berberUsta.x, z: berberUsta.z, r: 0.35 }, { tur: 'kisi', x: barmenYeri.x, z: barmenYeri.z, r: 0.35 }, { tur: 'tabut', x: 42, z: 60.1, r: 0.75 });
   // Kılık değiştirme noktaları
   // Ağır suçlar: aranma seviyesini 1 artırır (diğerleri 1 düşürür). Simgeleri kırmızı çerçeveli.
-  const AGIR = new Set(['banka', 'zehir', 'dinamit', 'kibrit', 'su', 'at', 'tabanca', 'anahtar', 'kasa']);
+  const AGIR = new Set(['banka', 'zehir', 'dinamit', 'kibrit', 'su', 'at', 'tabanca', 'anahtar', 'kasa', 'rusvet']);
   gorevler.forEach(g => { g.agir = AGIR.has(g.id); });
   // Aranma seviyesine göre görevin posta kutusuna düşme süresi (ms): 0→15 sn … 6→hemen
   const POSTA_GECIKME = [15000, 12000, 10000, 8000, 6000, 3000, 0];
@@ -508,7 +516,7 @@ const Kasaba = (() => {
   function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
 
   return {
-    susler, POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
+    susler, POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, barmenYeri, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
     SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
     it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
   };

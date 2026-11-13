@@ -223,6 +223,15 @@ const Sahne = (() => {
         ekle(new THREE.BoxGeometry(0.05, 0.2, 0.05), mat('#c92a2a'), 1.6, 0.33);
         const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: postaDokusu(0), depthTest: true, transparent: true }));
         sp.scale.set(0.9, 0.9, 1); sp.position.y = 2.35; g.add(sp); postaSpritelari.push(sp);
+      } else if (e.tur === 'tabut') {   // mezarlıkta açık tabut, sehpalar, çiçekler, mumlar
+        const koyu = mat('#3a2414');
+        [-0.6, 0.6].forEach(x => ekle(new THREE.BoxGeometry(0.12, 0.6, 0.7), mat('#5a3a20'), 0.3, x));
+        ekle(new THREE.BoxGeometry(0.75, 0.4, 1.9), koyu, 0.8);
+        const kapak = ekle(new THREE.BoxGeometry(0.75, 0.08, 1.9), mat('#4a2e18'), 1.1, 0.45); kapak.rotation.z = -1.1;
+        ekle(new THREE.BoxGeometry(0.5, 0.05, 1.5), mat('#e8e0d0'), 1.01);
+        ['#c92a4a', '#f2f2f2', '#e8c84a'].forEach((c, i) => ekle(new THREE.SphereGeometry(0.12, 6, 5), mat(c), 1.08, (i - 1) * 0.15, 0.6));
+        [-1.2, 1.2].forEach(z => { ekle(new THREE.CylinderGeometry(0.05, 0.05, 0.9, 6), mat('#4a4a50'), 0.45, -0.7, z); ekle(new THREE.CylinderGeometry(0.06, 0.06, 0.15, 6), mat('#f5f0e0'), 0.98, -0.7, z); ekle(new THREE.SphereGeometry(0.04, 5, 4), mat('#ffcc55', { emissive: '#aa6600' }), 1.1, -0.7, z); });
+      } else if (e.tur === 'kisi') {   // berber ustası / barmen ayrı çizilir
       } else if (e.tur === 'fici') { ekle(new THREE.CylinderGeometry(0.5, 0.5, 1.1, 10), mat('#7a4a22'), 0.55); }
       else if (e.tur === 'saman') { const s = ekle(new THREE.CylinderGeometry(1, 1, 1.4, 12), mat('#e2c46b'), 1); s.rotation.z = Math.PI / 2; }
       else if (e.tur === 'yalak') { ekle(new THREE.BoxGeometry(2, 0.6, 0.9), mat('#6b4428'), 0.3); ekle(new THREE.BoxGeometry(1.8, 0.05, 0.7), mat('#4a8ab0'), 0.58); }
@@ -330,7 +339,7 @@ const Sahne = (() => {
   function kapiCanlandir(dt) { if (kapiGrup) kapiGrup.rotation.y += (kapiHedef - kapiGrup.rotation.y) * Math.min(1, dt * 3); }
 
   // ---------- Görev eşyaları: sandalyeler, berber koltuğu ve ustası, berber direği ----------
-  let usta = null;
+  let usta = null, barmen = null;
   function gorevEsyalari() {
     Kasaba.gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye').forEach(g => {
       const berber = g.anim === 'otur';
@@ -345,6 +354,7 @@ const Sahne = (() => {
     // Berber ustası (koltuğun arkasında, müşteri oturunca tıraş eder)
     const u = Kasaba.berberUsta;
     usta = Karakter.yap(1); usta.position.set(u.x, 0, u.z); usta.rotation.y = u.yon; scene.add(usta);
+    const bm = Kasaba.barmenYeri; barmen = Karakter.yap(1); barmen.position.set(bm.x, 0, bm.z); barmen.rotation.y = bm.yon; scene.add(barmen);
     // Dükkânın önünde kırmızı-beyaz berber direği
     const b = Kasaba.binaBul('berber'), d = Kasaba.dunya(b, 2.6, b.d / 2 + 0.5);
     const direk = new THREE.Group(); direk.position.set(d.x, 0, d.z); scene.add(direk);
@@ -536,5 +546,5 @@ const Sahne = (() => {
     if (degirmenPervane) degirmenPervane.rotation.z += dt * 1.2;
   }
 
-  return { susAnim, get berberUstasi() { return usta; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
+  return { susAnim, get berberUstasi() { return usta; }, get barmen() { return barmen; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
 })();

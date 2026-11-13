@@ -538,6 +538,7 @@
     varliklar.forEach(v => { if (v.durum === 0 && v.h === oturan && Math.hypot(v.x - trasGorevi.x, v.z - trasGorevi.z) < 1.3) var_ = true; });
     if (oyun.h === oturan && Math.hypot(oyun.x - trasGorevi.x, oyun.z - trasGorevi.z) < 1.3) var_ = true;
     Karakter.canlandir(u, var_ ? Kasaba.animKodu('tras') : 0, dt);
+    if (Sahne.barmen) Karakter.canlandir(Sahne.barmen, Kasaba.animKodu('calis'), dt * 0.6);   // barmen bardak siler
   }
   function lazerleriGuncelle() {
     const gorulen = new Set();

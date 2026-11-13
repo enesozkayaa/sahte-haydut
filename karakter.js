@@ -248,6 +248,12 @@ const Karakter = (() => {
         Object.assign(p, { gx: 0.25, oR: -1.2 + sn * 0.12, eR: -0.2, oL: -0.5 + cs * 0.15, eL: -0.6 }); break;
       case 'ye':       // masada oturup kaşıkla yer
         Object.assign(p, { kL: -1.5, kR: -1.5, dL: 1.5, dR: 1.5, gy: -0.4, gx: 0.12, oL: -0.8, eL: -0.9, oR: -0.7 - Math.max(0, sn) * 0.5, eR: -1.2 - Math.max(0, sn) * 0.9 }); break;
+      case 'yas':      // tabutun başında başı eğik, eller önde kavuşmuş, hafif sallanır
+        Object.assign(p, { gx: 0.32 + sn * 0.04, oL: -0.55, oR: -0.55, eL: -1.25, eR: -1.25 }); break;
+      case 'ver':      // barmene para uzatır
+        Object.assign(p, { gx: 0.1, oR: -1.4 + sn * 0.1, eR: -0.15, oL: -0.25, eL: -0.3 }); break;
+      case 'dua':      // diz çöker, ellerini göğsünde birleştirir
+        Object.assign(p, { kL: 0, kR: 0, dL: 1.57, dR: 1.57, gy: -0.4, gx: 0.12 + sn * 0.03, oL: -1.05, oR: -1.05, eL: -1.35, eR: -1.35 }); break;
       case 'tras':     // berber: usturayla tıraş eder
         Object.assign(p, { gx: 0.25, oR: -1.35 + sn * 0.12, eR: -0.7 + cs * 0.25, oL: -1.2, eL: -0.8 }); break;
       default:         // genel çalışma

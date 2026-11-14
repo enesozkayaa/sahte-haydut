@@ -140,6 +140,26 @@
     // iPhone sayfayı kendi kendine büyütmesin (iki parmak / çift dokunma)
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
     document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    // Tuşlara hızlı hızlı basınca (ateş, koş…) iPhone bunu "çift dokunma" sanıp büyütmesin:
+    // bunu style.css'teki "touch-action: manipulation" engeller (basışları yutmaz)
+    document.addEventListener('dblclick', e => e.preventDefault());
+    // Yine de büyürse: klavye kapanınca, telefon dönünce ya da büyümüş görününce yakınlaştırmayı sıfırla (diğer oyunlardaki çözüm)
+    (function () {
+      const m = document.querySelector('meta[name=viewport]');
+      const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (!m || !ios) return;
+      const asil = m.getAttribute('content');
+      function sifirla() {
+        m.setAttribute('content', 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+        setTimeout(() => m.setAttribute('content', asil), 400);
+      }
+      document.addEventListener('focusout', e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) setTimeout(sifirla, 50); });
+      window.addEventListener('orientationchange', () => setTimeout(sifirla, 300));
+      if (window.visualViewport) visualViewport.addEventListener('resize', () => {
+        const odak = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+        if (!odak && visualViewport.scale > 1.01) sifirla();
+      });
+    })();
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
   </script>
 </body>

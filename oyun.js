@@ -436,12 +436,13 @@
   function yakinEylem() {
     if (!oyun || !oyun.canli || oyun.is) return null;
     if (oyun.rol === 'serif') {   // şerif: posta kutusuna bakabilir
-      const k = Kasaba.postaKutulari.find(p => Math.hypot(p.x - oyun.x, p.z - oyun.z) < 2.2 && oyun.y < 1);
+      const k = !Kasaba.icBina(oyun.x, oyun.z) && Kasaba.postaKutulari.find(p => Math.hypot(p.x - oyun.x, p.z - oyun.z) < 2.2 && oyun.y < 1);
       return k ? { tur: 'posta', k } : null;
     }
     let en = null, ed = 2.4;
-    Kasaba.gorevler.forEach(g => { if (!oyun.aktif.has(g.id) || oyun.gorunen.has(g.id) || Math.abs(g.y - oyun.y) > 1.5) return; const d = Math.hypot(g.x - oyun.x, g.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'gorev', g }; } });
-    if (!en && oyun.kilik > 0) Kasaba.kiliklar.forEach(k => { if (!oyun.kilikYerleri.has(k.id)) return; const d = Math.hypot(k.x - oyun.x, k.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'kilik', k }; } });
+    const bina = Kasaba.icBina(oyun.x, oyun.z);   // duvarın öbür yanındaki görev yapılamaz: aynı binada (ya da ikiniz de dışarıda) olmalısınız
+    Kasaba.gorevler.forEach(g => { if (!oyun.aktif.has(g.id) || oyun.gorunen.has(g.id) || Math.abs(g.y - oyun.y) > 1.5 || Kasaba.icBina(g.x, g.z) !== bina) return; const d = Math.hypot(g.x - oyun.x, g.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'gorev', g }; } });
+    if (!en && oyun.kilik > 0) Kasaba.kiliklar.forEach(k => { if (!oyun.kilikYerleri.has(k.id) || Kasaba.icBina(k.x, k.z) !== bina) return; const d = Math.hypot(k.x - oyun.x, k.z - oyun.z); if (d < ed) { ed = d; en = { tur: 'kilik', k }; } });
     return en;
   }
   function eylem() {

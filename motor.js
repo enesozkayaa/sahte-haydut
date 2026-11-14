@@ -101,7 +101,7 @@ const Motor = (() => {
       case 'gorev': {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is) return;
         const g = Kasaba.gorevler.find(x => x.id === m.gid);
-        if (!g || !o.aktif.has(g.id) || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5) return;
+        if (!g || !o.aktif.has(g.id) || Math.hypot(v.x - g.x, v.z - g.z) > 2.8 || Math.abs((v.y || 0) - g.y) > 1.5 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(g.x, g.z)) return;   // duvar arkasından görev yok
         if (o.yapilan.has(g.id)) { cb.kisiye(id, { tip: 'is', iptal: true, yapilmis: g.id }); return; }
         p.is = { tur: 'gorev', gid: g.id, bitis: Date.now() + g.sure * 1000, x: g.x, z: g.z, r: 3.2 };   // oyuncu görev yerine yerleşir (yürürse iptal)
         cb.kisiye(id, { tip: 'is', ad: g.ad, sure: g.sure });
@@ -110,7 +110,7 @@ const Motor = (() => {
       case 'kilik': {
         if (!canlimi(p) || p.rol !== 'haydut' || p.is || p.kilik <= 0) return;
         const k = o.kilikYerleri.has(m.kid) && Kasaba.kiliklar.find(x => x.id === m.kid);
-        if (!k || Math.hypot(v.x - k.x, v.z - k.z) > 2.8) return;
+        if (!k || Math.hypot(v.x - k.x, v.z - k.z) > 2.8 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(k.x, k.z)) return;
         p.is = { tur: 'kilik', kid: k.id, bitis: Date.now() + 3000, x: k.x, z: k.z, r: 3.2 };
         cb.kisiye(id, { tip: 'is', ad: 'Kılık değiştiriliyor', sure: 3 });
         break;
@@ -118,7 +118,7 @@ const Motor = (() => {
       case 'iptal': if (p.is) isIptal(p); break;
       case 'posta': {   // şerif posta kutusuna baktı: en az 10 sn önce yapılmış görevleri öğrenir
         if (!canlimi(p) || p.rol !== 'serif' || !v) return;
-        if (!Kasaba.postaKutulari.some(k => Math.hypot(k.x - v.x, k.z - v.z) < 3)) return;
+        if (Kasaba.icBina(v.x, v.z) || !Kasaba.postaKutulari.some(k => Math.hypot(k.x - v.x, k.z - v.z) < 3)) return;
         cb.kisiye(id, { tip: 'postaListe', ids: postaBilgisi() });
         break;
       }

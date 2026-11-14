@@ -75,8 +75,15 @@ const Sahne = (() => {
     if (b.ic && (b.tur === 'ev' || b.tur === 'ambar' || b.id === 'kilise')) kutuEkle(g + 0.4, 0.2, d + 0.4, 0, H + 0.1, 0, cati);
     // Çatı
     if (b.tur === 'ambar') {
-      const c = new THREE.Mesh(new THREE.CylinderGeometry(g * 0.55, g * 0.55, d, 4, 1, false, Math.PI / 4), cati);
-      c.rotation.z = Math.PI / 2; c.rotation.x = Math.PI / 2; c.scale.set(1, 1, 0.5); c.position.y = H; grup.add(c);
+      // Ambar çatısı: duvarların üstünde iki eğimli panel + ön/arka üçgen duvar (içeri sarkmaz)
+      const hr = g * 0.26, yarim = g / 2 + 0.3, aci = Math.atan2(hr, yarim), boy = Math.hypot(yarim, hr) + 0.2;
+      [-1, 1].forEach(s => {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(boy, 0.25, d + 0.6), cati);
+        p.position.set(s * yarim / 2, H + hr / 2 + 0.1, 0); p.rotation.z = -s * aci; grup.add(p);
+      });
+      const ucgen = new THREE.Shape(); ucgen.moveTo(-g / 2, 0); ucgen.lineTo(g / 2, 0); ucgen.lineTo(0, hr); ucgen.closePath();
+      const ucgenGeo = new THREE.ShapeGeometry(ucgen);
+      [1, -1].forEach(s => { const u = new THREE.Mesh(ucgenGeo, new THREE.MeshLambertMaterial({ color: b.renk, side: THREE.DoubleSide })); u.position.set(0, H, s * (d / 2 + (b.ic ? Kasaba.DUVAR / 2 : 0))); grup.add(u); });
       if (!b.ic) { kutuEkle(g * 0.4, y * 0.5, 0.2, 0, y * 0.25, d / 2 + 0.05, mat('#f3efe6')); kutuEkle(g * 0.36, y * 0.46, 0.22, 0, y * 0.25, d / 2 + 0.08, mat(koyu(b.renk, 0.8))); }
     } else if (b.tur === 'ev' || b.id === 'kilise') {
       const egim = new THREE.Mesh(new THREE.CylinderGeometry(0.01, g * 0.62, y * 0.4, 4, 1), cati);

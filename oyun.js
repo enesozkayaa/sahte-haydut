@@ -517,7 +517,7 @@
   setInterval(() => { zamanlariGuncelle(); if (oyun && !oyun.canli) izlemeYazisi(); }, 1000);
   function bildirim(m) {
     if (m.sayi && oyun.rol === 'haydut') oyun.gorevSayi = Math.max(oyun.gorevSayi, m.sayi);
-    if (m.gid && !String(m.gid).startsWith('kilik:')) oyun.yapilan.add(m.gid);
+    if (m.gid && !String(m.gid).startsWith('kilik:')) { oyun.yapilan.add(m.gid); if (oyun.rol === 'haydut') { oyun.gorunen.add(m.gid); hudGuncelle(); } }   // takım arkadaşının yaptığı görev haydutta anında silinir
     if (oyun.rol === 'haydut') {
       akisEkle(`${m.metin} (${m.sayi}/${oyun.ayar.hedef})${m.kim ? ' – ' + m.kim : ''}${m.posta !== undefined ? ` · 📬 ${m.posta ? m.posta + ' sn sonra postada' : 'hemen postada'}` : ''}`, 'takim');
     } else {
@@ -705,7 +705,7 @@
     $('gorevPanelBtn').textContent = `📋 Görevler ${oyun.gorevSayi}/${oyun.ayar.hedef}${dokun ? '' : ' (L)'}`;
     const ust = oyun.rol === 'serif'
       ? `<li class="not">📬 Yapılanları görmek için posta kutusuna git (E)</li>`
-      : `<li class="not"><button id="kalanBtn" ${oyun.kalanHakki ? '' : 'disabled'}>🔍 Kalan görevleri göster (${oyun.kalanHakki} hak)</button></li>`;
+      : `<li class="not">✅ Sen ya da takım arkadaşın bir görevi yapınca anında silinir</li>`;
     const bicakSatir = oyun.oldurGerek ? `<li class="${oyun.oldurulen >= oyun.oldurGerek ? 'yapildi' : ''} agir">🔪 ${oyun.rol === 'haydut' ? 'Kırmızı çerçeveli kişileri bıçakla' : 'Bıçaklanan kasabalı'}: ${oyun.oldurulen}/${oyun.oldurGerek}</li>` : '';
     $('gorevListe').innerHTML = ust + bicakSatir + Kasaba.gorevler.filter(g => oyun.aktif.has(g.id)).map(g => `<li class="${oyun.gorunen.has(g.id) ? 'yapildi' : ''} ${g.agir ? 'agir' : ''}">${g.agir ? '🔴' : '🟡'} ${g.emoji} ${kacis(g.ad)}</li>`).join('');
     const kb = $('kalanBtn'); if (kb) kb.onclick = kalanlariGoster;

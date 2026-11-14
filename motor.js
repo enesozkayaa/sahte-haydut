@@ -144,8 +144,8 @@ const Motor = (() => {
       case 'posta': {   // şerif posta kutusuna baktı: en az 10 sn önce yapılmış görevleri öğrenir
         if (!canlimi(p) || p.rol !== 'serif' || !v) return;
         if (Kasaba.icBina(v.x, v.z) || !Kasaba.postaKutulari.some(k => Math.hypot(k.x - v.x, k.z - v.z) < 3)) return;
-        const ids = postaBilgisi(); o.postaOkunan = ids.length; o.postaSayi = -1;   // kutudaki sayı 0'lanır (okunmamış haber kalmadı)
-        o.oyuncular.forEach(q => { if (q.rol === 'serif') cb.kisiye(q.id, { tip: 'postaListe', ids, kim: q.id === id ? null : p.ad }); });   // bütün şerifler öğrenir
+        const ids = postaBilgisi(), simdi = Date.now(), gecen = postaKayitlari().map(k => Math.round((simdi - k.t) / 1000)); o.postaOkunan = ids.length; o.postaSayi = -1;   // kutudaki sayı 0'lanır (okunmamış haber kalmadı)
+        o.oyuncular.forEach(q => { if (q.rol === 'serif') cb.kisiye(q.id, { tip: 'postaListe', ids, gecen, kim: q.id === id ? null : p.ad }); });   // bütün şerifler öğrenir
         break;
       }
       case 'ates': ates(p, v, m.hedef); break;

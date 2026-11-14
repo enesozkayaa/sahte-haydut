@@ -176,6 +176,8 @@ const Kasaba = (() => {
     for (const w of [d2, -d2]) {
       L.push(kutuYerel(b, -g2, -kg, w - K / 2, w + K / 2), kutuYerel(b, kg, g2, w - K / 2, w + K / 2));
       if (b.ic === 2) L.push(kutuYerel(b, -kg, kg, w - K / 2, w + K / 2, 1));      // üst katta kapı yok
+      const wk = w - Math.sign(w) * (kg + 0.05);   // içe açılmış kapı kanadı da katı
+      L.push(kutuYerel(b, kg - 0.02, kg + 0.14, wk - (kg - 0.05), wk + (kg - 0.05), 0));
     }
     L.push(kutuYerel(b, -g2 - K / 2, -g2 + K / 2, -d2, d2), kutuYerel(b, g2 - K / 2, g2 + K / 2, -d2, d2));
     if (b.ic === 2) {
@@ -281,6 +283,13 @@ const Kasaba = (() => {
     else kutular.push({ x1: b.x - b.g / 2, x2: b.x + b.g / 2, z1: b.z - b.d / 2, z2: b.z + b.d / 2, kat: 2 });
   });
 
+  // Sundurma direkleri ve banka sütunları (sahne.js ile aynı yerler) katı
+  binalar.forEach(b => {
+    if (b.tur === 'kule' || b.tur === 'ambar' || b.tur === 'ev' || Math.abs(b.z) >= 40) return;
+    for (let u = -b.g / 2 + 0.3; u <= b.g / 2; u += Math.max(3, b.g / 4)) { if (Math.abs(u) < 1.6) continue;   // kapının önüne direk yok
+      const p = dunya(b, u, b.d / 2 + 2.3); engeller.push({ tur: 'gorunmez', x: p.x, z: p.z, r: 0.17 }); }
+  });
+  { const b = binaBul('banka'); [-2.2, 2.2].forEach(u => { const p = dunya(b, u, b.d / 2 + 0.3); engeller.push({ tur: 'gorunmez', x: p.x, z: p.z, r: 0.33 }); }); }
   // Şerif bekleme odası: oyun başında şerifler burada kilitli bekler, sonra doğudaki kapı açılır
   const serifOdasi = { x: -61, z: -31, g: 10, d: 7, y: 3.2, kapiG: 2.4 };
   {
@@ -385,6 +394,9 @@ const Kasaba = (() => {
         if (!uygun(x, z, r)) continue;
         const e = { tur, x, z, r, yon: rnd() * Math.PI * 2, cesit: Math.floor(rnd() * 3) };
         susler.push(e); if (katı) engeller.push(e); i++;
+        // Görüntüde gövdeden taşan parçalar (sahne.js'teki yerel konum, e.yon kadar döndürülmüş)
+        const tasan = { sandik: [[0.2, -0.75, 0.38]], degirmen: [[1.8, 0, 1.15]] }[tur] || [];
+        tasan.forEach(([lx, lz, r]) => engeller.push({ tur: 'gorunmez', x: x + lx * Math.cos(e.yon) + lz * Math.sin(e.yon), z: z - lx * Math.sin(e.yon) + lz * Math.cos(e.yon), r }));
       }
     };
     ekle('agac', 34, 0.45);
@@ -400,7 +412,7 @@ const Kasaba = (() => {
       const on = b.d / 2 + 1.3, kenar = b.g / 2 - 0.7;
       const kose = dunya(b, i % 2 ? kenar : -kenar, on);
       const yakinKapi = p => kapilar.some(k => Math.hypot(k.x - p.x, k.z - p.z) < 3) || postaKutulari.some(k => Math.hypot(k.x - p.x, k.z - p.z) < 2.5) || gorevler.some(g => Math.hypot(g.x - p.x, g.z - p.z) < 2.5);
-      if (!yakinKapi(kose) && !icerde(kose.x, kose.z, 0.6)) { const e = { tur: 'ficiYigin', x: kose.x, z: kose.z, r: 0.55, yon: i, cesit: i % 3 }; susler.push(e); engeller.push(e); }
+      if (!yakinKapi(kose) && !icerde(kose.x, kose.z, 0.6)) { const e = { tur: 'ficiYigin', x: kose.x, z: kose.z, r: 0.68, yon: i, cesit: i % 3 }; susler.push(e); engeller.push(e); }
       const bank = dunya(b, i % 2 ? -kenar + 0.6 : kenar - 0.6, on - 0.2);
       if (!yakinKapi(bank)) {   // bank 1,4 m uzun: üç daireyle katı
         susler.push({ tur: 'bank', x: bank.x, z: bank.z, r: 0.3, yon: b.kapi === 'k' ? Math.PI : 0, cesit: 0 });

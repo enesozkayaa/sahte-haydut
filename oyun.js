@@ -200,7 +200,7 @@
         }
         if (oyun) { oyun.postaN = m.n; if (oyun.rol === 'serif' && m.toplam !== undefined && oyun.gorevSayi !== m.toplam) { oyun.gorevSayi = m.toplam; hudGuncelle(); } }
         break;
-      case 'postaListe': if (oyun) postaListesi(m.ids, m.kim); break;
+      case 'postaListe': if (oyun) postaListesi(m.ids, m.kim, m.gecen); break;
       case 'serifler': serifPaneli(m.liste); break;
       case 'lobi': oyunuTemizle(); ekran('lobi'); break;
     }
@@ -716,7 +716,11 @@
     oyun.kalanHakki = 0; oyun.gorunen = new Set(oyun.yapilan);
     toast(`🔍 ${oyun.aktif.size - [...oyun.gorunen].filter(g => oyun.aktif.has(g)).length} görev kaldı`, 2000); hudGuncelle();
   }
-  function postaListesi(ids, kim) {
+  function postaListesi(ids, kim, gecen = []) {
+    // Sağdaki akışa: yeni öğrenilen görevler ve kaç saniye önce yapıldıkları (eskiden yeniye)
+    const yeniler = ids.map((id, i) => ({ id, s: gecen[i] ?? 0 })).filter(k => !oyun.gorunen.has(k.id)).sort((a, b) => b.s - a.s);
+    yeniler.forEach(k => { const g = Kasaba.gorevler.find(x => x.id === k.id); if (g) akisEkle(`📬 ${g.emoji} ${g.olay}${g.agir ? ' 🔴' : ''}`, '', k.s); });
+    if (!yeniler.length) akisEkle('📬 Posta kutusunda yeni haber yok');
     oyun.gorunen = new Set(ids);
     toast(kim ? `📬 ${kacis(kim)} posta kutusuna baktı: ${ids.length} görev yapılmış<br><small>Listende üstü çizildi</small>` : `📬 Posta kutusu: ${ids.length} görev yapılmış<br><small>Kutudaki sayı sıfırlandı; yeni haber gelince yine artar</small>`, 2600);
     if (!kim) $('gorevListe').classList.remove('gizli');

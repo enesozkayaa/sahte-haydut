@@ -114,7 +114,7 @@ const Sahne = (() => {
       // Saçak ve direkler
       if (Math.abs(b.z) < 40 && b.tur !== 'ev') {
         kutuEkle(g, 0.15, 2.4, 0, 3.2, d / 2 + 1.2, cati);
-        for (let x = -g / 2 + 0.3; x <= g / 2; x += Math.max(3, g / 4)) kutuEkle(0.18, 3.2, 0.18, x, 1.6, d / 2 + 2.3, cerceve);
+        for (let x = -g / 2 + 0.3; x <= g / 2; x += Math.max(3, g / 4)) if (Math.abs(x) >= 1.6) kutuEkle(0.18, 3.2, 0.18, x, 1.6, d / 2 + 2.3, cerceve);
       }
     }
     // Tabela

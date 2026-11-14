@@ -163,6 +163,7 @@ const Karakter = (() => {
     const dizL = u.bacakL.userData.diz, dizR = u.bacakR.userData.diz;
     const dirL = u.kolL.userData.dirsek, dirR = u.kolR.userData.dirsek;
     if (u.cekic) { u.cekic.visible = h === 10 + ANIMLER.indexOf('dov'); u.sise.visible = h === 10 + ANIMLER.indexOf('dok'); u.bicak.visible = h === 10 + ANIMLER.indexOf('bicak'); }
+    if (h < 10) u.sonAnim = null;
     if (h >= 10) { gorevPozu(u, ANIMLER[h - 10] || 'calis', dt, yum, dizL, dizR, dirL, dirR); return; }
     if (h === 3) {   // görev yapıyor: kollar önde, dirsekler bükük, elleri bir şeyle uğraşıyor
       u.faz += dt * 9;
@@ -256,8 +257,10 @@ const Karakter = (() => {
         Object.assign(p, { gx: 0.1, oR: -1.4 + sn * 0.1, eR: -0.15, oL: -0.25, eL: -0.3 }); break;
       case 'dua':      // diz çöker, ellerini göğsünde birleştirir
         Object.assign(p, { kL: 0, kR: 0, dL: 1.57, dR: 1.57, gy: -0.4, gx: 0.12 + sn * 0.03, oL: -1.05, oR: -1.05, eL: -1.35, eR: -1.35 }); break;
-      case 'bicak': {  // bıçağı kaldırıp öne doğru saplar
-        const d = (f * 0.9) % 1, sapla = d < 0.45 ? d / 0.45 : 1 - (d - 0.45) / 0.55;
+      case 'bicak': {  // tek vuruş: bıçağı kaldırır, bir kez saplar, öyle kalır
+        if (u.sonAnim !== 'bicak') u.bicakBas = f;
+        const d = Math.min(1, (f - u.bicakBas) / 4.2);   // ~0,7 sn
+        const sapla = d < 0.4 ? 0 : d < 0.6 ? (d - 0.4) / 0.2 : 1;
         Object.assign(p, { gx: 0.1 + sapla * 0.2, oR: -2.3 + sapla * 1.0, eR: -1.2 + sapla * 1.1, oL: -0.9, eL: -0.6, kL: -0.35, dL: 0.35, dR: 0.15 });
         break;
       }
@@ -274,6 +277,7 @@ const Karakter = (() => {
     u.govdeG.rotation.x = yum(u.govdeG.rotation.x, p.gx, 10); u.govdeG.position.y = yum(u.govdeG.position.y, p.gy, 10);
     if (anim !== 'dans') u.govdeG.rotation.y = yum(u.govdeG.rotation.y, 0, 10);
     if (u.sise) u.sise.rotation.x = anim === 'dok' ? 1.9 + Math.sin(f * 0.7) * 0.25 : 0;   // şişe ağzı aşağı
+    u.sonAnim = anim;
   }
   // Bu görev hareketinin ağ kodu
   const animKodu = Kasaba.animKodu;

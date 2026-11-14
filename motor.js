@@ -49,6 +49,7 @@ const Motor = (() => {
       tamamlanan: [], postaSayi: -1, postaSeviye: -1, sonPosta: 0, aranma: 0,   // aranma: haydutların aranma seviyesi 0..6   // posta kutuları için: [{ gid, t }]
       aktif: new Set(karistir(Kasaba.gorevler.map(g => g.id)).slice(0, Math.min(Kasaba.gorevler.length, ayar.hedef))),   // bu oyunun görevleri
       kilikYerleri: new Set(karistir(Kasaba.kiliklar.map(k => k.id)).slice(0, Kasaba.KILIK_SAYISI)),   // her oyunda farklı; sadece haydutlara söylenir
+      oldurGerek: [0, 3, 5, 10].includes(+ayar.oldur) ? +ayar.oldur : 0, oldurulen: 0, hedefBotlar: new Set(),   // haydutların bıçaklaması gereken kasabalılar
     };
     Kasaba.odaKapisi(true);
     oyuncular.forEach((p, i) => {
@@ -75,6 +76,7 @@ const Motor = (() => {
         ayar: o.ayar, haydutSayisi: hayN, serifSayisi: n - hayN, sure: ayar.sure * 60, bekleme: BEKLEME, gorevler: [...o.aktif], kiliklar: p.rol === 'haydut' ? [...o.kilikYerleri] : [],
       });
     });
+    hedefleriTamamla(); hedefYay();
     serifYay();
     sesTablosu();   // ilk andan itibaren doğru ses seviyeleri (telsiz sızmasın)
   }
@@ -83,6 +85,15 @@ const Motor = (() => {
     cb.herkese({ tip: 'serifler', liste: o.oyuncular.filter(p => p.rol === 'serif').map(p => ({ ad: p.ad, hak: Math.max(0, p.hak), durum: p.durum })) });
   }
 
+  // Bıçaklanacak kasabalılar: kalan öldürme sayısı kadar hedef olsun (sadece haydutlar bilir)
+  function hedefleriTamamla() {
+    const kalan = o.oldurGerek - o.oldurulen;
+    const adaylar = karistir([...o.varliklar.values()].filter(v => !v.oyuncuId && v.durum === 0 && !o.hedefBotlar.has(v.no)));
+    while (o.hedefBotlar.size < kalan && adaylar.length) o.hedefBotlar.add(adaylar.pop().no);
+  }
+  function hedefYay() {
+    o.oyuncular.forEach(p => cb.kisiye(p.id, { tip: 'hedefler', nolar: p.rol === 'haydut' ? [...o.hedefBotlar] : [], oldurulen: o.oldurulen, gerek: o.oldurGerek }));
+  }
   const oyuncu = id => o?.oyuncular.find(p => p.id === id);
   const canlimi = p => p && p.durum === 0;
 
@@ -115,6 +126,20 @@ const Motor = (() => {
         cb.kisiye(id, { tip: 'is', ad: 'Kılık değiştiriliyor', sure: 3 });
         break;
       }
+      case 'oldur': {   // haydut hedef kasabalıyı bıçaklar: yere yığılır, şeriflere hemen haber gider
+        if (!canlimi(p) || p.rol !== 'haydut' || p.is || !v) return;
+        const h = o.varliklar.get(m.no), simdi = Date.now();
+        if (!h || !o.hedefBotlar.has(m.no) || h.durum !== 0 || h.oyuncuId || simdi - (p.sonBicak || 0) < 1500) return;
+        if (Math.hypot(h.x - v.x, h.z - v.z) > 2.6 || Math.abs((h.y || 0) - (v.y || 0)) > 1.2 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(h.x, h.z)) return;
+        p.sonBicak = simdi;
+        h.durum = 3; h.h = 0; h.olumZaman = simdi; h.yol = null; h.yaw = Math.atan2(h.x - v.x, h.z - v.z);   // ceset oyun boyunca yerde kalır
+        o.hedefBotlar.delete(m.no); o.oldurulen++;
+        o.yeniKasabali.push(simdi + 15000);   // kalabalık azalmasın
+        o.oyuncular.forEach(q => cb.kisiye(q.id, { tip: 'cinayet', oldurulen: o.oldurulen, gerek: o.oldurGerek, kim: q.rol === 'haydut' ? p.ad : null }));
+        hedefYay();
+        kontrol();
+        break;
+      }
       case 'iptal': if (p.is) isIptal(p); break;
       case 'posta': {   // şerif posta kutusuna baktı: en az 10 sn önce yapılmış görevleri öğrenir
         if (!canlimi(p) || p.rol !== 'serif' || !v) return;
@@ -145,14 +170,10 @@ const Motor = (() => {
     const hp = gecerli && h.oyuncuId ? oyuncu(h.oyuncuId) : null;
     const vurdu = gecerli && !(hp && hp.rol === 'serif');
     cb.herkese({ tip: 'ates', no: p.no, hedef: vurdu ? hedefNo : -1 });
-    // Yakındaki kasabalılar korkup kaçışır
-    o.varliklar.forEach(n => {
-      if (n.oyuncuId || n.durum) return;
-      const dx = n.x - v.x, dz = n.z - v.z, d = Math.hypot(dx, dz);
-      if (d < 14 && n !== h) { n.kacis = rnd(2.5, 4); n.kacisYon = Math.atan2(dx, dz) + rnd(-0.6, 0.6); n.yol = null; n.bekle = 0; }
-    });
+    // Kasabalılar ateşten korkup kaçmaz (kaçsalardı ıskalanınca kaçmayan oyuncu ele verirdi)
     if (!vurdu) return;
     h.durum = 1; h.olumZaman = simdi; h.h = 0;
+    if (o.hedefBotlar.delete(hedefNo)) { hedefleriTamamla(); hedefYay(); }   // şerif bir hedefi vurduysa haydutlara yeni hedef
     if (hp) {   // haydut vuruldu
       hp.durum = 1; hp.is = null;
       bilgi(`🎯 ${p.ad} bir haydudu vurdu: ${hp.ad}`, 'iyi');
@@ -374,7 +395,7 @@ const Motor = (() => {
     const canliHaydut = o.oyuncular.filter(p => p.rol === 'haydut' && p.durum === 0).length;
     const canliSerif = o.oyuncular.filter(p => p.rol === 'serif' && p.durum === 0).length;
     if (canliHaydut === 0) return bitir('serif', 'Bütün haydutlar yakalandı!');
-    if (o.gorevSayi >= o.ayar.hedef) return bitir('haydut', `Haydutlar ${o.ayar.hedef} görevi tamamladı!`);
+    if (o.gorevSayi >= o.ayar.hedef && o.oldurulen >= o.oldurGerek) return bitir('haydut', o.oldurGerek ? `Haydutlar ${o.ayar.hedef} görevi yaptı ve ${o.oldurGerek} kişiyi bıçakladı!` : `Haydutlar ${o.ayar.hedef} görevi tamamladı!`);
     if (canliSerif === 0) return bitir('haydut', 'Bütün şerifler hapse girdi!');
     if (Date.now() >= o.bitis) return bitir('haydut', 'Süre doldu, haydutlar kasabadan kaçtı!');
   }

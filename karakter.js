@@ -78,14 +78,16 @@ const Karakter = (() => {
     if (t.baston) { const b = parca(silindir(0.025, 0.025, 0.9, 6), '#5a3a1a', 0, -0.64, 0.06, kolR.userData.dirsek); b.rotation.x = 0.1; }
     if (serif) tabancaEkle(kolR.userData.dirsek);
     // Görev eşyaları (sadece görevde görünür): çekiç ve zehir şişesi
-    let cekic = null, sise = null;
+    let cekic = null, sise = null, bicak = null;
     if (!serif) {
       const d = kolR.userData.dirsek;
       cekic = new THREE.Group(); cekic.position.set(0, -0.34, 0.02); d.add(cekic);
       parca(kutu(0.04, 0.04, 0.38), '#6a4424', 0, 0, 0.14, cekic); parca(kutu(0.1, 0.09, 0.18), '#4a4a52', 0, 0, 0.33, cekic);
       sise = new THREE.Group(); sise.position.set(0, -0.36, 0.05); d.add(sise);
       parca(silindir(0.065, 0.065, 0.26, 8), '#2f8a3a', 0, -0.08, 0, sise); parca(silindir(0.025, 0.03, 0.1, 6), '#2f8a3a', 0, -0.26, 0, sise); parca(kutu(0.1, 0.06, 0.02), '#f2f2f2', 0, -0.06, 0.066, sise);
-      cekic.visible = sise.visible = false;
+      bicak = new THREE.Group(); bicak.position.set(0, -0.36, 0.03); d.add(bicak);   // bıçak: sadece bıçaklarken görünür
+      parca(kutu(0.04, 0.1, 0.05), '#3a2414', 0, 0, 0, bicak); parca(kutu(0.1, 0.02, 0.06), '#8a8a92', 0, -0.06, 0, bicak); parca(kutu(0.015, 0.05, 0.3), '#e4e8ee', 0, -0.03, 0.17, bicak);
+      cekic.visible = sise.visible = bicak.visible = false;
     }
     // Baş
     const bas = new THREE.Group(); bas.position.set(0, 1.72, 0); govdeG.add(bas);
@@ -117,7 +119,7 @@ const Karakter = (() => {
     }
     const boy = t.boy || 1;
     g.scale.set(1, boy, 1);
-    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0, cekic, sise };
+    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0, cekic, sise, bicak };
     return g;
   }
 
@@ -160,7 +162,7 @@ const Karakter = (() => {
     const yum = (a, b, k = 12) => a + (b - a) * Math.min(1, dt * k);
     const dizL = u.bacakL.userData.diz, dizR = u.bacakR.userData.diz;
     const dirL = u.kolL.userData.dirsek, dirR = u.kolR.userData.dirsek;
-    if (u.cekic) { u.cekic.visible = h === 10 + ANIMLER.indexOf('dov'); u.sise.visible = h === 10 + ANIMLER.indexOf('dok'); }
+    if (u.cekic) { u.cekic.visible = h === 10 + ANIMLER.indexOf('dov'); u.sise.visible = h === 10 + ANIMLER.indexOf('dok'); u.bicak.visible = h === 10 + ANIMLER.indexOf('bicak'); }
     if (h >= 10) { gorevPozu(u, ANIMLER[h - 10] || 'calis', dt, yum, dizL, dizR, dirL, dirR); return; }
     if (h === 3) {   // görev yapıyor: kollar önde, dirsekler bükük, elleri bir şeyle uğraşıyor
       u.faz += dt * 9;
@@ -254,6 +256,11 @@ const Karakter = (() => {
         Object.assign(p, { gx: 0.1, oR: -1.4 + sn * 0.1, eR: -0.15, oL: -0.25, eL: -0.3 }); break;
       case 'dua':      // diz çöker, ellerini göğsünde birleştirir
         Object.assign(p, { kL: 0, kR: 0, dL: 1.57, dR: 1.57, gy: -0.4, gx: 0.12 + sn * 0.03, oL: -1.05, oR: -1.05, eL: -1.35, eR: -1.35 }); break;
+      case 'bicak': {  // bıçağı kaldırıp öne doğru saplar
+        const d = (f * 0.9) % 1, sapla = d < 0.45 ? d / 0.45 : 1 - (d - 0.45) / 0.55;
+        Object.assign(p, { gx: 0.1 + sapla * 0.2, oR: -2.3 + sapla * 1.0, eR: -1.2 + sapla * 1.1, oL: -0.9, eL: -0.6, kL: -0.35, dL: 0.35, dR: 0.15 });
+        break;
+      }
       case 'tras':     // berber: usturayla tıraş eder
         Object.assign(p, { gx: 0.25, oR: -1.35 + sn * 0.12, eR: -0.7 + cs * 0.25, oL: -1.2, eL: -0.8 }); break;
       default:         // genel çalışma

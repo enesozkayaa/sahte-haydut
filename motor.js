@@ -323,7 +323,7 @@ const Motor = (() => {
     cb.kisiye(p.id, { tip: 'is', bitti: true });
     const metin = `${g.emoji} ${g.olay}`;
     o.oyuncular.forEach(q => {
-      if (q.rol === 'haydut') { cb.kisiye(q.id, { tip: 'bildirim', metin: `✅ ${g.olay}`, gid, sayi: o.gorevSayi, gecen: 0, olayZamani: simdi, kim: p.ad }); cb.kisiye(q.id, { tip: 'aranma', seviye: o.aranma, agir: g.agir }); }
+      if (q.rol === 'haydut') { cb.kisiye(q.id, { tip: 'bildirim', metin: `✅ ${g.olay}`, gid, sayi: o.gorevSayi, gecen: 0, olayZamani: simdi, kim: p.ad, posta: Kasaba.POSTA_GECIKME[o.aranma] / 1000 }); cb.kisiye(q.id, { tip: 'aranma', seviye: o.aranma, agir: g.agir }); }
       else if (q.muhbirAktif) {   // muhbir: bu görevi şerife hemen fısıldar (adı ve yeri)
         q.muhbirAktif = false; cb.kisiye(q.id, { tip: 'muhbir', aktif: false });
         o.bekleyen.push({ zaman: simdi + 1500, id: q.id, mesaj: { tip: 'bildirim', metin: `📡 Muhbir: ${metin}`, gid, olayZamani: simdi, muhbir: true } });

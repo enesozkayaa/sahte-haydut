@@ -491,7 +491,7 @@
     if (m.sayi && oyun.rol === 'haydut') oyun.gorevSayi = Math.max(oyun.gorevSayi, m.sayi);
     if (m.gid && !String(m.gid).startsWith('kilik:')) oyun.yapilan.add(m.gid);
     if (oyun.rol === 'haydut') {
-      akisEkle(`${m.metin} (${m.sayi}/${oyun.ayar.hedef})${m.kim ? ' – ' + m.kim : ''}`, 'takim');
+      akisEkle(`${m.metin} (${m.sayi}/${oyun.ayar.hedef})${m.kim ? ' – ' + m.kim : ''}${m.posta !== undefined ? ` · 📬 ${m.posta ? m.posta + ' sn sonra postada' : 'hemen postada'}` : ''}`, 'takim');
     } else {
       // Şerif: görev bildirimi gelmez (posta kutusundan öğrenir); sadece muhbir ve kılık haberleri gelir
       akisEkle(m.metin, m.muhbir ? 'kotu' : '', m.gecen || 0);
@@ -717,6 +717,10 @@
       x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
       Kasaba.gorevler.forEach(g => { if (oyun.aktif.has(g.id) && !oyun.gorunen.has(g.id)) { nokta(g.x, g.z, 8, g.agir ? '#ff7a6acc' : '#ffe08acc', g.agir ? '#a01010' : '#7a5a10'); x.fillText('✉️', PX(g.x), PZ(g.z) + olcek); } });
       if (oyun.kilik > 0) Kasaba.kiliklar.forEach(k => { if (oyun.kilikYerleri.has(k.id)) nokta(k.x, k.z, 4, '#a070ff'); });
+    }
+    else if (oyun.rol === 'serif') {   // şerif: kalan görevlerin yerleri (posta kutusundan öğrendiği yapılmışlar silinir)
+      x.font = `${Math.round(14 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+      Kasaba.gorevler.forEach(g => { if (oyun.aktif.has(g.id) && !oyun.gorunen.has(g.id)) { nokta(g.x, g.z, 9, g.agir ? '#ff8a7ae6' : '#ffe9a8e6', g.agir ? '#c01010' : '#3a2a10'); x.fillText(g.emoji, PX(g.x), PZ(g.z) + olcek); } });
     }
     const t = performance.now();
     oyun.darbe = oyun.darbe.filter(d => t - d.bas < (d.sure || 9000));

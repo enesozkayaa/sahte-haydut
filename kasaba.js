@@ -74,6 +74,10 @@ const Kasaba = (() => {
   // Posta kutuları: şerifler buradan (en az 10 sn geriden) hangi görevlerin yapıldığını öğrenir
   const postaKutulari = [{ x: -53, z: 7.4 }, { x: -10, z: -7.4 }, { x: 10, z: 7.4 }, { x: 46, z: -7.4 }, { x: -25, z: 40 }, { x: 40, z: -40 }];
   postaKutulari.forEach(p => engeller.push({ tur: 'posta', x: p.x, z: p.z, r: 0.45 }));
+  // Cadde fenerlerinin direkleri (sahne.js'teki fenerlerle aynı yerler) de katı
+  for (let x = -80; x <= 80; x += 20) [-8.4, 8.4].forEach(z => engeller.push({ tur: 'gorunmez', x: x + 4, z, r: 0.2 }));
+  // Meydandaki ilan tahtası (3 m genişlik): yan yana daireler
+  [-1.4, -0.7, 0, 0.7, 1.4].forEach(dx => engeller.push({ tur: 'gorunmez', x: -14 + dx, z: 9.6, r: 0.3 }));
   const RAY_Z = -78;     // demiryolu (görsel)
 
   const binaBul = id => binalar.find(b => b.id === id) || alanlar.find(a => a.id === id);
@@ -328,7 +332,7 @@ const Kasaba = (() => {
     for (let t = 0.2; t < enFazla; t += 0.2) { if (icerdeBina(x + dx * t, z + dz * t, kat)) return t; }
     return enFazla;
   }
-  function icerdeBina(x, z, kat = 0) { for (const k of kutular) if (sayilir(k, kat) && x > k.x1 && x < k.x2 && z > k.z1 && z < k.z2) return true; return false; }
+  function icerdeBina(x, z, kat = 0, pay = 0) { for (const k of kutular) if (sayilir(k, kat) && x > k.x1 - pay && x < k.x2 + pay && z > k.z1 - pay && z < k.z2 + pay) return true; return false; }
 
   // ---------- Katlar ----------
   // Bu noktanın içinde olduğu girilebilir bina (yoksa null)
@@ -388,7 +392,7 @@ const Kasaba = (() => {
     ekle('at', 7, 0.9);
     ekle('sandik', 12, 0.75);
     ekle('degirmen', 1, 1.3);
-    ekle('kaya', 30, 0.5, false);
+    ekle('kaya', 30, 0.5);
     ekle('ot', 90, 0.2, false);
     // Ana cadde kenarı: bina köşelerinde fıçılar, kaldırım kenarında bağlı atlar, sundurmada banklar (kapıların önüne konmaz)
     const caddeBinalari = binalar.filter(b => Math.abs(b.z) < 30 && b.tur !== 'kule');
@@ -398,7 +402,10 @@ const Kasaba = (() => {
       const yakinKapi = p => kapilar.some(k => Math.hypot(k.x - p.x, k.z - p.z) < 3) || postaKutulari.some(k => Math.hypot(k.x - p.x, k.z - p.z) < 2.5) || gorevler.some(g => Math.hypot(g.x - p.x, g.z - p.z) < 2.5);
       if (!yakinKapi(kose) && !icerde(kose.x, kose.z, 0.6)) { const e = { tur: 'ficiYigin', x: kose.x, z: kose.z, r: 0.55, yon: i, cesit: i % 3 }; susler.push(e); engeller.push(e); }
       const bank = dunya(b, i % 2 ? -kenar + 0.6 : kenar - 0.6, on - 0.2);
-      if (!yakinKapi(bank)) susler.push({ tur: 'bank', x: bank.x, z: bank.z, r: 0.3, yon: b.kapi === 'k' ? Math.PI : 0, cesit: 0 });
+      if (!yakinKapi(bank)) {   // bank 1,4 m uzun: üç daireyle katı
+        susler.push({ tur: 'bank', x: bank.x, z: bank.z, r: 0.3, yon: b.kapi === 'k' ? Math.PI : 0, cesit: 0 });
+        [-0.5, 0, 0.5].forEach(dx => engeller.push({ tur: 'gorunmez', x: bank.x + dx, z: bank.z, r: 0.3 }));
+      }
     });
     // Kaldırım kenarında bağlı atlar (iki bina arasındaki boşluklarda, caddeye paralel)
     [[-68, -8.3], [-35, -8.3], [28.5, -8.3], [64, -8.3], [-55, 8.3], [-28, 8.3], [24.5, 8.3], [62, 8.3]].forEach(([x, z], i) => {
@@ -516,7 +523,7 @@ const Kasaba = (() => {
   function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
 
   return {
-    susler, POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, barmenYeri, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
+    susler, icerdeBina, oturaklar: gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye'), POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, barmenYeri, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
     SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
     it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
   };

@@ -46,7 +46,7 @@ const Motor = (() => {
       varliklar: new Map(), oyuncular: [], yapilan: new Set(), gorevSayi: 0, bekleyen: [],
       sonrakiNo: toplam, sonSes: 0, yeniKasabali: [],
       serifCikis: Date.now() + BEKLEME * 1000, kapiAcildi: false,
-      tamamlanan: [], postaSayi: -1, postaSeviye: -1, sonPosta: 0, aranma: 0,   // aranma: haydutların aranma seviyesi 0..6   // posta kutuları için: [{ gid, t }]
+      tamamlanan: [], postaOkunan: 0, postaSayi: -1, postaSeviye: -1, sonPosta: 0, aranma: 0,   // aranma: haydutların aranma seviyesi 0..6   // posta kutuları için: [{ gid, t }]
       aktif: new Set(karistir(Kasaba.gorevler.map(g => g.id)).slice(0, Math.min(Kasaba.gorevler.length, ayar.hedef))),   // bu oyunun görevleri
       kilikYerleri: new Set(karistir(Kasaba.kiliklar.map(k => k.id)).slice(0, Kasaba.KILIK_SAYISI)),   // her oyunda farklı; sadece haydutlara söylenir
       oldurGerek: [0, 3, 5, 10].includes(+ayar.oldur) ? +ayar.oldur : 0, oldurulen: 0, hedefBotlar: new Set(),   // haydutların bıçaklaması gereken kasabalılar
@@ -92,7 +92,7 @@ const Motor = (() => {
     while (o.hedefBotlar.size < kalan && adaylar.length) o.hedefBotlar.add(adaylar.pop().no);
   }
   function hedefYay() {
-    o.oyuncular.forEach(p => cb.kisiye(p.id, { tip: 'hedefler', nolar: p.rol === 'haydut' ? [...o.hedefBotlar] : [], oldurulen: o.oldurulen, gerek: o.oldurGerek }));
+    o.oyuncular.forEach(p => cb.kisiye(p.id, { tip: 'hedefler', nolar: p.rol === 'haydut' && o.kapiAcildi ? [...o.hedefBotlar] : [], bekle: !o.kapiAcildi, oldurulen: o.oldurulen, gerek: o.oldurGerek }));   // hedefler şerifler odadan çıkınca belli olur
   }
   const oyuncu = id => o?.oyuncular.find(p => p.id === id);
   const canlimi = p => p && p.durum === 0;
@@ -129,7 +129,7 @@ const Motor = (() => {
       case 'oldur': {   // haydut hedef kasabalıyı bıçaklar: yere yığılır, şeriflere hemen haber gider
         if (!canlimi(p) || p.rol !== 'haydut' || p.is || !v) return;
         const h = o.varliklar.get(m.no), simdi = Date.now();
-        if (!h || !o.hedefBotlar.has(m.no) || h.durum !== 0 || h.oyuncuId || simdi - (p.sonBicak || 0) < 1500) return;
+        if (!o.kapiAcildi || !h || !o.hedefBotlar.has(m.no) || h.durum !== 0 || h.oyuncuId || simdi - (p.sonBicak || 0) < 1500) return;
         if (Math.hypot(h.x - v.x, h.z - v.z) > 2.6 || Math.abs((h.y || 0) - (v.y || 0)) > 1.2 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(h.x, h.z)) return;
         p.sonBicak = simdi;
         h.durum = 3; h.h = 0; h.olumZaman = simdi; h.yol = null; h.yaw = Math.atan2(h.x - v.x, h.z - v.z);   // ceset oyun boyunca yerde kalır
@@ -144,7 +144,8 @@ const Motor = (() => {
       case 'posta': {   // şerif posta kutusuna baktı: en az 10 sn önce yapılmış görevleri öğrenir
         if (!canlimi(p) || p.rol !== 'serif' || !v) return;
         if (Kasaba.icBina(v.x, v.z) || !Kasaba.postaKutulari.some(k => Math.hypot(k.x - v.x, k.z - v.z) < 3)) return;
-        cb.kisiye(id, { tip: 'postaListe', ids: postaBilgisi() });
+        const ids = postaBilgisi(); o.postaOkunan = ids.length; o.postaSayi = -1;   // kutudaki sayı 0'lanır (okunmamış haber kalmadı)
+        o.oyuncular.forEach(q => { if (q.rol === 'serif') cb.kisiye(q.id, { tip: 'postaListe', ids, kim: q.id === id ? null : p.ad }); });   // bütün şerifler öğrenir
         break;
       }
       case 'ates': ates(p, v, m.hedef); break;
@@ -279,6 +280,7 @@ const Motor = (() => {
     if (!o.kapiAcildi && simdi >= o.serifCikis) {   // şerif odasının kapısı açılır
       o.kapiAcildi = true; Kasaba.odaKapisi(false);
       cb.herkese({ tip: 'kapi', acik: true });
+      if (o.oldurGerek) hedefYay();
     }
     o.varliklar.forEach(v => { if (!v.oyuncuId) npcAdim(v, dt); });
     // İşler (görev / kılık) bitti mi?
@@ -313,14 +315,14 @@ const Motor = (() => {
     // Posta kutularındaki sayı: 10 sn önceye kadar yapılmış görevler
     if (simdi - o.sonPosta > 1000) {
       o.sonPosta = simdi;
-      const gorunen = postaKayitlari(), n = gorunen.length;
+      const gorunen = postaKayitlari(), n = Math.max(0, gorunen.length - o.postaOkunan);   // kutuda: henüz bakılmamış haberler
       // Şerifler aranma seviyesini de posta kutusundan (gecikmeli) öğrenir
       const sonKayit = gorunen.reduce((a, k) => (!a || k.t > a.t ? k : a), null), seviye = sonKayit ? sonKayit.seviye : 0;
       if (n !== o.postaSayi || seviye !== o.postaSeviye) {
         const yeni = n > o.postaSayi && o.postaSayi >= 0 ? gorunen.filter(k => k.gorunur > simdi - 1500).map(k => k.gid) : [];
         o.postaSayi = n; o.postaSeviye = seviye;
         // Aranma 5+ iken yeni düşen görevin yeri şeriflere haritada gösterilir
-        cb.herkese({ tip: 'posta', n, seviye, yerler: seviye >= 5 ? yeni : [] });
+        cb.herkese({ tip: 'posta', n, toplam: gorunen.length, seviye, yerler: seviye >= 5 ? yeni : [] });
       }
     }
     kontrol();

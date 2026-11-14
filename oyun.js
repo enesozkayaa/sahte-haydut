@@ -176,7 +176,7 @@
       case 'sesler': Object.entries(m.v).forEach(([id, v]) => Ag.seviyeAyarla(id, v)); break;
       case 'bitti': if (oyun) bitti(m); break;
       case 'kapi': if (oyun) kapiAcildi(); break;
-      case 'hedefler': if (oyun) { oyun.hedefler = new Set(m.nolar); oyun.oldurulen = m.oldurulen; oyun.oldurGerek = m.gerek; hedefCizgileri(); hudGuncelle(); } break;
+      case 'hedefler': if (oyun) { if (oyun.rol === 'haydut' && oyun.hedefBekle && !m.bekle && m.gerek) { toast(`🔪 Hedefler belli oldu!<br><small>Kırmızı çerçeveli ${m.gerek - m.oldurulen} kişiyi gizlice bıçakla</small>`, 3000); Ses.bildirim(); } oyun.hedefBekle = m.bekle; oyun.hedefler = new Set(m.nolar); oyun.oldurulen = m.oldurulen; oyun.oldurGerek = m.gerek; hedefCizgileri(); hudGuncelle(); } break;
       case 'cinayet': if (oyun) {
         oyun.oldurulen = m.oldurulen; hudGuncelle();
         if (oyun.rol === 'serif') { toast('🔪 Bir kasabalı bıçaklandı!<br><small>Cesedi yerde yatıyor, etrafa bak</small>', 2600); akisEkle(`🔪 Bir kasabalı bıçaklandı (${m.oldurulen}/${m.gerek})`, 'kotu'); Ses.kotu(); }
@@ -196,11 +196,11 @@
           (m.yerler || []).forEach(gid => { const g = Kasaba.gorevler.find(x => x.id === gid); if (g) oyun.darbe.push({ x: g.x, z: g.z, bas: performance.now(), sure: m.seviye >= 6 ? 3000 : 1000 }); });   // 5: 1 sn, 6: 3 sn
         }
         if (oyun && m.n > oyun.postaN) {   // 10 sn önce bir görev yapıldı: zil çalar, şerif kutuya bakmalı
-          if (oyun.rol === 'serif') { oyun.gorevSayi = m.n; Ses.posta(); toast('📬 Posta kutularına yeni bilgi geldi!<br><small>Hangi görev olduğunu görmek için bir kutuya git</small>', 2600); hudGuncelle(); }
+          if (oyun.rol === 'serif') { oyun.gorevSayi = m.toplam ?? m.n; Ses.posta(); toast('📬 Posta kutularına yeni bilgi geldi!<br><small>Hangi görev olduğunu görmek için bir kutuya git</small>', 2600); hudGuncelle(); }
         }
-        if (oyun) oyun.postaN = m.n;
+        if (oyun) { oyun.postaN = m.n; if (oyun.rol === 'serif' && m.toplam !== undefined && oyun.gorevSayi !== m.toplam) { oyun.gorevSayi = m.toplam; hudGuncelle(); } }
         break;
-      case 'postaListe': if (oyun) postaListesi(m.ids); break;
+      case 'postaListe': if (oyun) postaListesi(m.ids, m.kim); break;
       case 'serifler': serifPaneli(m.liste); break;
       case 'lobi': oyunuTemizle(); ekran('lobi'); break;
     }
@@ -239,7 +239,7 @@
     const takim = m.takimAdlar.filter(a => a !== benimAdim());
     if (m.rol === 'haydut') {
       toast(`🦹 HAYDUTSUN!<br><small>${takim.length ? 'Takımın: ' + takim.map(kacis).join(', ') : 'Tek haydut sensin'}</small>`, 4500);
-      akisEkle(`🦹 Haydutsun. Sarı işaretli görevleri yap, kalabalığa karış. Hedef: ${m.ayar.hedef} görev${m.ayar.oldur ? ` + kırmızı çerçeveli ${m.ayar.oldur} kişiyi gizlice bıçakla (E)` : ''}.`, 'takim');
+      akisEkle(`🦹 Haydutsun. Sarı işaretli görevleri yap, kalabalığa karış. Hedef: ${m.ayar.hedef} görev${m.ayar.oldur ? ` + ${m.ayar.oldur} kişiyi gizlice bıçakla (hedefler şerifler odadan çıkınca kırmızı çerçeveyle belli olacak)` : ''}.`, 'takim');
     } else {
       toast(`⭐ ŞERİFSİN!<br><small>${m.haydutSayisi} haydut kalabalığın içinde saklanıyor</small>`, 4500);
       akisEkle(`⭐ Şerifsin. Görev yapılınca sana haber gelmez: 📬 posta kutularının zilini dinle, kutuya bakıp öğren. ${m.ayar.hak} atış hakkın var.`, 'iyi');
@@ -716,10 +716,11 @@
     oyun.kalanHakki = 0; oyun.gorunen = new Set(oyun.yapilan);
     toast(`🔍 ${oyun.aktif.size - [...oyun.gorunen].filter(g => oyun.aktif.has(g)).length} görev kaldı`, 2000); hudGuncelle();
   }
-  function postaListesi(ids) {
+  function postaListesi(ids, kim) {
     oyun.gorunen = new Set(ids);
-    toast(`📬 Posta kutusu: ${ids.length} görev yapılmış<br><small>(en az 10 sn önceki durum)</small>`, 2600);
-    $('gorevListe').classList.remove('gizli'); hudGuncelle(); Ses.bildirim();
+    toast(kim ? `📬 ${kacis(kim)} posta kutusuna baktı: ${ids.length} görev yapılmış<br><small>Listende üstü çizildi</small>` : `📬 Posta kutusu: ${ids.length} görev yapılmış<br><small>Kutudaki sayı sıfırlandı; yeni haber gelince yine artar</small>`, 2600);
+    if (!kim) $('gorevListe').classList.remove('gizli');
+    hudGuncelle(); Ses.bildirim();
   }
   let toastSayac = null;
   function toast(html, ms = 2000) { const t = $('toast'); t.innerHTML = html; t.classList.add('goster'); clearTimeout(toastSayac); toastSayac = setTimeout(() => t.classList.remove('goster'), ms); }
@@ -807,7 +808,7 @@
         let f = ((v.tyaw - v.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; v.yaw += f * k;
       }
       v.g.position.set(v.x, v.y, v.z); v.g.rotation.y = v.yaw;
-      v.g.visible = !(no === oyun.benimNo && (!oyun.canli || oyun.kamera === 'goz')) && no !== izleNo;
+      v.g.visible = !(no === oyun.benimNo && (!oyun.canli || oyun.kamera === 'goz' || oyun.kameraYakin)) && no !== izleNo;
       Karakter.canlandir(v.g, no === oyun.benimNo ? oyun.h : v.h, dt);
     });
     kameraAyarla();
@@ -859,7 +860,15 @@
       if (oyun.canli && oyun.is && !oyun.is.iptalGitti) { oyun.is.iptalGitti = true; Ag.eveGonder({ tip: 'iptal' }); }
       const hiz = !oyun.canli ? HAYALET : kos ? KOS : YURU;
       const nx = oyun.x + mx / ml * hiz * dt * Math.min(1, boy), nz = oyun.z + mz / ml * hiz * dt * Math.min(1, boy);
-      if (oyun.canli) { const p = Kasaba.it(nx, nz, 0.35, Kasaba.katOf(oyun.y)); oyun.x = p.x; oyun.z = p.z; oyun.y = Kasaba.zeminY(p.x, p.z, oyun.y); }
+      if (oyun.canli) {
+        let p = Kasaba.it(nx, nz, 0.35, Kasaba.katOf(oyun.y));
+        Kasaba.oturaklar.forEach(g => {   // görev sandalyeleri de katı (sadece oyuncu için; botlar oturmaya gider)
+          if (Math.abs(g.y - oyun.y) > 1) return;
+          const dx = p.x - g.x, dz = p.z - g.z, d = Math.hypot(dx, dz), m = 0.32 + 0.33;
+          if (d < m && d > 1e-4) { const q = Kasaba.it(g.x + dx / d * m, g.z + dz / d * m, 0.35, Kasaba.katOf(oyun.y)); p = q; }
+        });
+        oyun.x = p.x; oyun.z = p.z; oyun.y = Kasaba.zeminY(p.x, p.z, oyun.y);
+      }
       else { oyun.x = Math.max(-110, Math.min(110, nx)); oyun.z = Math.max(-110, Math.min(110, nz)); }
       oyun.h = kos ? 2 : 1;
       const hedefYaw = oyun.kamera === 'goz' || oyun.nisan ? oyun.yaw : Math.atan2(mx, mz);
@@ -931,14 +940,24 @@
     const v = varliklar.get(oyun.benimNo);
     const boy = v ? v.g.scale.y : 1;
     if (oyun.kamera === 'goz' && oyun.canli) {
-      k.position.set(oyun.x + Math.sin(oyun.yaw) * 0.18, oyun.y + 1.66 * boy, oyun.z + Math.cos(oyun.yaw) * 0.18);
+      const on = Kasaba.icerdeBina(oyun.x + Math.sin(oyun.yaw) * 0.18, oyun.z + Math.cos(oyun.yaw) * 0.18, Kasaba.katOf(oyun.y), 0.22) ? 0 : 0.18;   // duvara dayanınca içini görmesin
+      k.position.set(oyun.x + Math.sin(oyun.yaw) * on, oyun.y + 1.66 * boy, oyun.z + Math.cos(oyun.yaw) * on);
     } else {
       const yuk = oyun.canli ? 1.75 : 2.6, uzak = oyun.canli ? 3.6 : 5;
-      const sagx = -Math.cos(oyun.yaw) * 0.55, sagz = Math.sin(oyun.yaw) * 0.55;
-      const bx = oyun.x + sagx, bz = oyun.z + sagz;
+      // Omuz kayması: sağdaki duvara girmesin
+      const kat = Kasaba.katOf(oyun.y), PAY = 0.28;   // kamera duvara en az bu kadar yaklaşır (yoksa duvarın içi görünür)
+      let sag = 0.55;
+      if (oyun.canli) while (sag > 0 && Kasaba.icerdeBina(oyun.x - Math.cos(oyun.yaw) * sag, oyun.z + Math.sin(oyun.yaw) * sag, kat, PAY)) sag -= 0.05;
+      const bx = oyun.x - Math.cos(oyun.yaw) * Math.max(0, sag), bz = oyun.z + Math.sin(oyun.yaw) * Math.max(0, sag);
       const l2 = Math.hypot(d.x, d.z) || 1;
-      const serbest = oyun.canli ? Math.max(0.6, Math.min(uzak, Kasaba.isin(bx, bz, -d.x / l2, -d.z / l2, uzak + 0.4, Kasaba.katOf(oyun.y)) - 0.4)) : uzak;
-      k.position.set(bx - d.x * serbest, Math.max(oyun.y + 0.4, oyun.y + yuk - d.y * serbest), bz - d.z * serbest);
+      let serbest = uzak;
+      if (oyun.canli) {   // arkadaki duvara kadar geri çekil, duvara PAY kadar yaklaşınca dur
+        serbest = 0;
+        for (let t = 0.05; t <= uzak; t += 0.05) { if (Kasaba.icerdeBina(bx - d.x * t, bz - d.z * t, kat, PAY)) break; serbest = t; }
+      }
+      oyun.kameraYakin = oyun.canli && serbest < 0.8;   // duvara sırtını dayadın: kamera kafanın içine girmesin, gözünden bak
+      if (oyun.kameraYakin) k.position.set(oyun.x, oyun.y + 1.66 * boy, oyun.z);
+      else k.position.set(bx - d.x * serbest, Math.max(oyun.y + 0.4, oyun.y + yuk - d.y * serbest), bz - d.z * serbest);
       // Bina içindeyken kamera tavanı delmesin
       if (oyun.canli) k.position.y = Math.min(k.position.y, Kasaba.tavan(oyun.x, oyun.z, oyun.y), Kasaba.tavan(k.position.x, k.position.z, oyun.y));
       // Şerif odasındayken kamera çatının üstüne çıkmasın

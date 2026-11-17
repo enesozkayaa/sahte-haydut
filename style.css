@@ -37,6 +37,10 @@ label { font-weight: 800; font-size: 14px; }
 #ekler input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #b5651d; }
 #ekler span { display: block; flex: 1; text-align: left; line-height: 1.2; }
 #ekler small { font-size: 12px; opacity: .75; font-weight: 600; }
+/* Bilgisayarda düğmelerin köşesinde kısayol tuşu */
+#sagTuslar button[data-tus], #ustSag button[data-tus] { position: relative; }
+#sagTuslar button[data-tus]::after, #ustSag button[data-tus]::after { content: attr(data-tus); position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 3px; border-radius: 5px; background: #ffd23f; color: #3b2414; font: 900 12px/18px Nunito, sans-serif; box-shadow: 0 1px 2px #0008; pointer-events: none; }
+body.dokun #sagTuslar button[data-tus]::after, body.dokun #ustSag button[data-tus]::after { display: none; }
 #durbunBtn.basili { background: #ffffff99 !important; }
 #durbunGoz { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, transparent 0 38vmin, #000d 40vmin); }
 #sonucListe { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }

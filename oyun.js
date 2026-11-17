@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 30;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 31;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -242,10 +242,10 @@
       ek: m.ayar.ek || {}, kanli: new Map(), cesetler: [], kopek: m.ayar.ek?.kopek ? 2 : 0, donmaBitis: 0, arananBitis: 0, durbun: false, fov: 70,
     };
     if (oyun.rol === 'serif') {   // seçilen yardımcıları şerife anlat
-      const l = [oyun.ek.arama && '🔎 Yanına yanaşıp E: üstünü ara', oyun.ek.durbun && '🔭 Z: dürbün', oyun.ek.kopek && '🐕 B: köpeği koklat (2 kez)', oyun.ek.kan && '🩸 Kanlı eller bıçaklayanı ele verir', oyun.ek.ceset && '🗺️ Ceset haritada yanar', oyun.ek.tanik && '👉 Tanıklar katili parmakla gösterir', oyun.ek.toz && '💨 Koşanlar toz kaldırır', oyun.ek.posta && '📬 Posta daha hızlı'].filter(Boolean);
+      const l = [oyun.ek.arama && '🔎 Yanına yanaşıp E: üstünü ara', oyun.ek.durbun && '🔭 Z: dürbün', oyun.ek.kopek && '🐕 B: köpeği koklat (2 kez)', '📡 R: muhbir', oyun.ek.kan && '🩸 Kanlı eller bıçaklayanı ele verir', oyun.ek.ceset && '🗺️ Ceset haritada yanar', oyun.ek.tanik && '👉 Tanıklar katili parmakla gösterir', oyun.ek.toz && '💨 Koşanlar toz kaldırır', oyun.ek.posta && '📬 Posta daha hızlı'].filter(Boolean);
       if (l.length) setTimeout(() => { if (oyun) akisEkle('🕵️ ' + l.join(' · '), 'iyi'); }, 50);
     } else if (oyun.ek.kan || oyun.ek.tanik || oyun.ek.toz || oyun.ek.arama) {
-      const l = [oyun.ek.kan && '🩸 bıçaklayınca elin 25 sn kanlı görünür', oyun.ek.tanik && '👉 yakındaki kasabalılar seni parmakla gösterir', oyun.ek.toz && '💨 koşarsan toz kaldırırsın', oyun.ek.arama && '🔎 şerifler üstünü arayabilir (kaçarsan şüphelenir)'].filter(Boolean);
+      const l = [oyun.ek.kan && '🩸 bıçaklayınca elin 15 sn kanlı görünür', oyun.ek.tanik && '👉 yakındaki kasabalılar seni parmakla gösterir', oyun.ek.toz && '💨 koşarsan toz kaldırırsın', oyun.ek.arama && '🔎 şerifler üstünü arayabilir (kaçarsan şüphelenir)'].filter(Boolean);
       setTimeout(() => { if (oyun) akisEkle('⚠️ Dikkat: ' + l.join(' · '), 'kotu'); }, 50);
     }
     $('akis').innerHTML = '';
@@ -373,6 +373,8 @@
     if (e.code === 'KeyK') mikDegistir();
     if (e.code === 'KeyQ') nisanDegistir();
     if (e.code === 'KeyZ') durbunAyarla(!oyun.durbun);
+    if (e.code === 'KeyR') $('muhbirBtn').click();
+    if (e.code === 'KeyN') $('sesBtn').click();
     if (e.code === 'KeyB') kopekKoklat();
     if (!oyun.canli && e.code === 'Space' && !oyun.serbest) { e.preventDefault(); izlemeDegistir(1); }
     // G: sadece ölen haydut ruh ↔ arkadaşını izle arasında geçer. Şerif hayalet olamaz (haydutları görüp ele verebilir).
@@ -385,7 +387,7 @@
   document.addEventListener('pointerlockchange', () => {
     const kilitli = document.pointerLockElement === kanvas;
     $('ipucu').textContent = kilitli
-      ? 'Fareyi serbest bırak: ESC veya Alt · WASD yürü · Shift koş · E görev · V kamera · T telsiz · K mikrofon · M harita'
+      ? 'Fareyi serbest bırak: ESC veya Alt · WASD yürü · Shift koş · E görev · V kamera · T telsiz · K mikrofon · M harita' + (oyun?.rol === 'serif' ? ' · Q lazer · R muhbir' + (oyun.ek?.durbun ? ' · Z dürbün' : '') + (oyun.ek?.kopek ? ' · B köpek' : '') : '')
       : '🖱️ Fare serbest: tuşlara tıklayabilirsin. Oyuna dönmek için ekrana tıkla.';
     $('ipucu').classList.toggle('serbest', !kilitli && !!oyun);
   });
@@ -484,7 +486,7 @@
   // Haydut: şerif üstümü arıyor
   function aranıyorum(m) {
     if (m.bitti) { oyun.arananBitis = 0; if (m.kacti) toast('😰 Kaçtın! Şerif şüphelendi', 2000); else toast('😌 Şerif bir şey bulamadı', 1800); return; }
-    oyun.arananBitis = performance.now() + m.sure * 1000;
+    oyun.arananBitis = performance.now() + m.sure * 1000; oyun.arayanNo = m.serifNo;
     toast(`⭐ ${kacis(m.kim)} üstünü arıyor!<br><small>${oyun.rol === 'haydut' ? 'Durursan yakalanırsın, uzaklaşırsan şüphelenir…' : 'Kıpırdama'}</small>`, 2600); Ses.kotu();
   }
   function aramaSonucu(m) {
@@ -1036,7 +1038,11 @@
       const b = oyun.bicakHedef;
       if (b) { const f = ((Math.atan2(b.x - oyun.x, b.z - oyun.z) - oyun.govdeYaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; oyun.govdeYaw += f * Math.min(1, dt * 12); }
     }
-    if (oyun.h === 0 && performance.now() < oyun.arananBitis) oyun.h = Kasaba.animKodu('eller');   // üstüm aranıyor: eller havada
+    if (oyun.h === 0 && performance.now() < oyun.arananBitis) {   // üstüm aranıyor: botlar gibi eller havada, şerife dön
+      oyun.h = Kasaba.animKodu('eller');
+      const s = varliklar.get(oyun.arayanNo);
+      if (s) { const f = ((Math.atan2(s.x - oyun.x, s.z - oyun.z) - oyun.govdeYaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; oyun.govdeYaw += f * Math.min(1, dt * 4); }
+    }
     if (oyun.is && oyun.h === 0) {   // göreve özel hareket (botlarla aynı)
       oyun.h = Kasaba.animKodu(oyun.is.anim);
       const n = oyun.sonEylem;

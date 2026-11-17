@@ -10,7 +10,7 @@ const Motor = (() => {
   const SES_YAKIN = 5, SES_UZAK = 22;
   const BEKLEME = 15;          // şerifler başta kaç saniye odada kilitli
   const SERIF_TIP = 10;        // şerif kıyafeti (karakter.js'teki 11. tip)
-  const KOPEK_HAK = 2, KOPEK_MENZIL = 10, KAN_SURE = 25, TANIK_MENZIL = 9, TANIK_SURE = 7000, ARAMA_SURE = 3000, ARAMA_CEZA = 5000;
+  const KOPEK_HAK = 2, KOPEK_MENZIL = 10, KAN_SURE = 15, TANIK_MENZIL = 9, TANIK_SURE = 7000, ARAMA_SURE = 3000, ARAMA_CEZA = 5000;
   const DONUS = 2.6;           // kasabalıların dönüş hızı (radyan/sn civarı) — oyuncu gibi yumuşak dönsünler
   let o = null;
   let cb = { kisiye() {}, herkese() {} };
@@ -157,7 +157,7 @@ const Motor = (() => {
         if (Math.hypot(h.x - v.x, h.z - v.z) > 2.4 || Math.abs((h.y || 0) - (v.y || 0)) > 1.2 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(h.x, h.z)) return;
         p.is = { tur: 'ara', no: m.no, bitis: simdi + ARAMA_SURE, x: v.x, z: v.z, r: 1.2 };
         cb.kisiye(id, { tip: 'is', ad: '🔎 Üstü aranıyor', sure: ARAMA_SURE / 1000 });
-        if (hp) { if (hp.is) isIptal(hp); cb.kisiye(hp.id, { tip: 'araniyor', kim: p.ad, sure: ARAMA_SURE / 1000 }); }
+        if (hp) { if (hp.is) isIptal(hp); cb.kisiye(hp.id, { tip: 'araniyor', kim: p.ad, sure: ARAMA_SURE / 1000, serifNo: p.no }); }
         else { h.arandi = simdi + ARAMA_SURE + 300; h.araSerif = p.no; }
         break;
       }

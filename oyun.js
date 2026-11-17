@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 29;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 30;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -632,11 +632,6 @@
   }
   const ustenNisan = () => oyun.nisan && oyun.canli && oyun.kamera !== 'goz' && !oyun.kameraYakin;
   function nisanHedefi() {
-    const v = varliklar.get(oyun.benimNo);
-    if (ustenNisan() && v) {   // kamera üstten bakıyor: atış lazerin çizgisinden gider
-      const { o, d } = silahIsini(v, oyun.yaw, oyun.pitch);
-      return isinAt(o.x, o.y, o.z, d, oyun.benimNo, oyun.y).no;
-    }
     const k = Sahne.kamera, d = new THREE.Vector3(); k.getWorldDirection(d);
     return isinAt(k.position.x, k.position.y, k.position.z, d, oyun.benimNo, oyun.y).no;
   }
@@ -661,7 +656,7 @@
     const gorulen = new Set();
     varliklar.forEach((v, no) => {
       const ben = no === oyun.benimNo;
-      const p = ben ? (oyun.nisan && oyun.canli ? oyun.pitch : null) : v.nisan;
+      const p = ben ? (oyun.nisan && oyun.canli ? (ustenNisan() ? oyun.lazerPitch ?? oyun.pitch : oyun.pitch) : null) : v.nisan;
       v.g.userData.nisan = p;
       if (p == null || v.durum !== 0) return;
       gorulen.add(no);
@@ -673,6 +668,16 @@
         const sag = new THREE.Vector3().crossVectors(d, YUKARI).normalize();
         o = k.position.clone().addScaledVector(sag, 0.05).addScaledVector(YUKARI, -0.05).addScaledVector(d, 1.2);
         l.ince = true;
+      } else if (ben && ustenNisan()) {   // arkadan bakış: lazer namludan ekranın ortasındaki noktaya gider
+        l.ince = false;
+        const k = Sahne.kamera, kd = new THREE.Vector3(); k.getWorldDirection(kd);
+        const hk = isinAt(k.position.x, k.position.y, k.position.z, kd, no, v.y);
+        const P = k.position.clone().addScaledVector(kd, Math.min(hk.t, 44));
+        const yaw = oyun.yaw, taban = new THREE.Vector3(v.x - Math.cos(yaw) * 0.35, v.y + 1.48 * v.g.scale.y, v.z + Math.sin(yaw) * 0.35);
+        d = P.clone().sub(taban);
+        if (d.length() < 1.6) ({ o, d } = silahIsini(v, yaw, oyun.pitch));   // hedef dibimdeyse düz ileri
+        else { d.normalize(); o = taban.addScaledVector(d, 0.95); }
+        oyun.lazerPitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
       } else {
         l.ince = false;
         ({ o, d } = silahIsini(v, ben ? oyun.yaw : v.yaw, p));
@@ -686,12 +691,6 @@
       l.nokta.position.copy(o).addScaledVector(d, L);
     });
     lazerler.forEach((l, no) => { if (!gorulen.has(no)) { Sahne.scene.remove(l.cizgi, l.nokta); lazerler.delete(no); } });
-    // Üstten nişanda nişangâh lazerin bittiği noktada dursun
-    const ni = $('nisan'), bl = lazerler.get(oyun.benimNo);
-    if (ustenNisan() && bl) {
-      const e = bl.nokta.position.clone().project(Sahne.kamera);
-      ni.style.left = ((e.x + 1) / 2 * 100).toFixed(2) + '%'; ni.style.top = ((1 - e.y) / 2 * 100).toFixed(2) + '%';
-    } else if (ni.style.left) { ni.style.left = ''; ni.style.top = ''; }
   }
   function ates() {
     if (!oyun || oyun.rol !== 'serif' || !oyun.canli) return;
@@ -1054,7 +1053,7 @@
     const t = performance.now();
     if (oyun.canli && t - oyun.sonGonder > 66) {
       oyun.sonGonder = t;
-      Ag.eveGonder({ tip: 'konum', x: Math.round(oyun.x * 100) / 100, z: Math.round(oyun.z * 100) / 100, y: Math.round(oyun.y * 100) / 100, n: oyun.nisan && oyun.canli ? Math.round(oyun.pitch * 100) / 100 : null, yaw: Math.round(oyun.govdeYaw * 100) / 100, h: oyun.h });
+      Ag.eveGonder({ tip: 'konum', x: Math.round(oyun.x * 100) / 100, z: Math.round(oyun.z * 100) / 100, y: Math.round(oyun.y * 100) / 100, n: oyun.nisan && oyun.canli ? Math.round((ustenNisan() ? oyun.lazerPitch ?? oyun.pitch : oyun.pitch) * 100) / 100 : null, yaw: Math.round(oyun.govdeYaw * 100) / 100, h: oyun.h });
     }
   }
 

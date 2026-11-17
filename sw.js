@@ -3,7 +3,7 @@
 // Oyunu güncelleyip yüklerken ONBELLEK numarasını 1 artır.
 // =============================================================
 
-const ONBELLEK = 'sahte-haydut-v33';
+const ONBELLEK = 'sahte-haydut-v34';
 const DOSYALAR = [
   './', 'index.html', 'style.css', 'kasaba.js', 'karakter.js', 'sahne.js', 'ag.js', 'ses.js', 'motor.js', 'oyun.js',
   'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',

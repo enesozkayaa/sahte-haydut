@@ -69,13 +69,12 @@
         <label>🔪 Bıçaklanacak kasabalı <select id="ayOldur"><option value="0">Yok</option><option>3</option><option selected>5</option><option>10</option></select></label>
         <label>👥 Kasabalı sayısı <select id="ayKasabali"><option value="30">30</option><option value="45" selected>45</option><option value="60">60</option></select></label>
         <label>👔 Kılık değiştirme hakkı <select id="ayKilik"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
-        <label id="aramaHakSatir" class="gizli">🔎 Üst arama hakkı <select id="ayAramaHak"><option>1</option><option selected>2</option><option>3</option></select></label>
         <fieldset id="ekler">
           <legend>🕵️ Şerife yardımcı özellikler <small>(seçtiklerin oyunda olur)</small></legend>
           <label><input type="checkbox" id="ekKan"> <span><b>🩸 Kanlı el</b><br><small>Bıçaklayan haydudun eli ve gömleği 15 sn kanlı görünür</small></span></label>
           <label><input type="checkbox" id="ekCeset"> <span><b>🗺️ Ceset haritada</b><br><small>Biri bıçaklanınca yeri şeriflerin haritasında 6 sn yanar</small></span></label>
           <label><input type="checkbox" id="ekToz"> <span><b>💨 Toz bulutu</b><br><small>Koşan herkes toz kaldırır, koşmak uzaktan görünür</small></span></label>
-          <label><input type="checkbox" id="ekArama"> <span><b>🔎 Üst arama</b><br><small>Şerif birine yanaşıp E'ye basar, 3 sn yanında yürüyerek üstünü arar (hak sayısı yukarıda). Haydutsa yakalanır, masumsa şerif 5 sn bekler</small></span></label>
+          <label><input type="checkbox" id="ekArama"> <span><b>🔎 Üst arama</b><br><small>Şerif birine yanaşıp E'ye basar, 3 sn yanında yürüyerek üstünü arar (hak sayısı yandan seçilir). Haydutsa yakalanır, masumsa şerif 5 sn bekler</small></span><select id="ayAramaHak" title="Her şerifin arama hakkı"><option value="1">1 hak</option><option value="2" selected>2 hak</option><option value="3">3 hak</option></select></label>
           <label><input type="checkbox" id="ekDurbun"> <span><b>🔭 Dürbün</b><br><small>Şerif Z ile uzağı yakından görür</small></span></label>
           <label><input type="checkbox" id="ekKopek"> <span><b>🐕 Köpek</b><br><small>Şerif 2 kez köpeği koklatır (B): 10 m içinde haydut varsa havlar</small></span></label>
           <label><input type="checkbox" id="ekTanik"> <span><b>👉 Tanıklar</b><br><small>Bıçaklamayı gören kasabalılar 7 sn katili parmakla gösterir</small></span></label>

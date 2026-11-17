@@ -279,7 +279,6 @@ const Sahne = (() => {
     const kandil = mat('#ffe7a8', { emissive: '#d89a30' });
     for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; const k = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), kandil); k.position.set(Math.cos(a) * 2.4, -0.1, Math.sin(a) * 2.4); avize.add(k); }
     [0, 1, 2, 3].forEach(i => { const a = i / 4 * Math.PI * 2 + 0.4, z = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.6, 4), altin); z.position.set(Math.cos(a) * 1.2, 1.3, Math.sin(a) * 1.2); z.rotation.z = Math.cos(a) * 0.43; z.rotation.x = -Math.sin(a) * 0.43; avize.add(z); });
-    const isik = new THREE.PointLight('#ffd8a0', 0.8, 18); isik.position.set(0.5, ay - 0.3, 0); grup.add(isik);
   }
   // Bina içi eşyalar: liste kasaba.js'te (aynı liste çarpışma için de kullanılır)
   function esyalar(b, k) {

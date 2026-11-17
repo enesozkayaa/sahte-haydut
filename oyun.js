@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 40;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 41;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -355,6 +355,10 @@
         v = { g, tip, x: v?.x ?? x, z: v?.z ?? z, y: v?.y ?? y, yaw: v?.yaw ?? yaw, tx: x, tz: z, ty: y, tyaw: yaw, h, durum };
         varliklar.set(no, v);
       }
+      // Yumuşak hareket: bir önceki paketten bu pakete, paketler arası süre boyunca düzgün hızla git
+      const simdi = performance.now();
+      v.ox = v.x; v.oz = v.z; v.oy = v.y; v.oyaw = v.yaw;
+      v.aralik = Math.max(60, Math.min(300, simdi - (v.sonPaket || simdi - 100))); v.sonPaket = simdi;
       v.tx = x; v.tz = z; v.ty = y; v.tyaw = yaw; v.h = h; v.nisan = nisan;
       if ((durum === 1 || durum === 3) && !v.g.userData.olum) { v.g.userData.olum = 0.01; Karakter.cizgiKaldir(v.g); v.g.userData.hedef = false; }
       v.durum = durum;
@@ -1011,10 +1015,10 @@
     varliklar.forEach((v, no) => {
       if (no === oyun.benimNo) { v.x = oyun.x; v.z = oyun.z; v.y = oyun.y; v.yaw = oyun.govdeYaw; }
       else {
-        const k = Math.min(1, dt * 9);
-        if (Math.hypot(v.tx - v.x, v.tz - v.z) > 6) { v.x = v.tx; v.z = v.tz; v.y = v.ty; }
-        v.x += (v.tx - v.x) * k; v.z += (v.tz - v.z) * k; v.y += (v.ty - v.y) * k;
-        let f = ((v.tyaw - v.yaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; v.yaw += f * k;
+        if (v.ox === undefined || Math.hypot(v.tx - v.ox, v.tz - v.oz) > 6) { v.x = v.ox = v.tx; v.z = v.oz = v.tz; v.y = v.oy = v.ty; v.yaw = v.oyaw = v.tyaw; }
+        const a = Math.min(1, (t - (v.sonPaket || 0)) / (v.aralik || 100));   // 0 → 1 arası, paket gelince sıfırlanır
+        v.x = v.ox + (v.tx - v.ox) * a; v.z = v.oz + (v.tz - v.oz) * a; v.y = v.oy + (v.ty - v.oy) * a;
+        const f = ((v.tyaw - v.oyaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; v.yaw = v.oyaw + f * a;
       }
       v.g.position.set(v.x, v.y, v.z); v.g.rotation.y = v.yaw;
       v.g.visible = !(no === oyun.benimNo && (!oyun.canli || oyun.kamera === 'goz' || oyun.kameraYakin)) && no !== izleNo;

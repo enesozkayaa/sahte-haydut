@@ -547,7 +547,20 @@
     });
     return { no: en, t: et };
   }
+  // Şerifin namlusundan çıkan ışın (lazer ve atış aynı çizgiden)
+  function silahIsini(v, yaw, p) {
+    const boy = v.g.scale.y, cp = Math.cos(p);
+    const d = new THREE.Vector3(Math.sin(yaw) * cp, Math.sin(p), Math.cos(yaw) * cp);
+    const o = new THREE.Vector3(v.x - Math.cos(yaw) * 0.35, v.y + 1.48 * boy, v.z + Math.sin(yaw) * 0.35).addScaledVector(d, 0.95);
+    return { o, d };
+  }
+  const ustenNisan = () => oyun.nisan && oyun.canli && oyun.kamera !== 'goz' && !oyun.kameraYakin;
   function nisanHedefi() {
+    const v = varliklar.get(oyun.benimNo);
+    if (ustenNisan() && v) {   // kamera üstten bakıyor: atış lazerin çizgisinden gider
+      const { o, d } = silahIsini(v, oyun.yaw, oyun.pitch);
+      return isinAt(o.x, o.y, o.z, d, oyun.benimNo, oyun.y).no;
+    }
     const k = Sahne.kamera, d = new THREE.Vector3(); k.getWorldDirection(d);
     return isinAt(k.position.x, k.position.y, k.position.z, d, oyun.benimNo, oyun.y).no;
   }
@@ -586,11 +599,10 @@
         l.ince = true;
       } else {
         l.ince = false;
-        const yaw = ben ? oyun.yaw : v.yaw, boy = v.g.scale.y, cp = Math.cos(p);
-        d = new THREE.Vector3(Math.sin(yaw) * cp, Math.sin(p), Math.cos(yaw) * cp);
-        o = new THREE.Vector3(v.x - Math.cos(yaw) * 0.35, v.y + 1.48 * boy, v.z + Math.sin(yaw) * 0.35).addScaledVector(d, 0.95);
+        ({ o, d } = silahIsini(v, ben ? oyun.yaw : v.yaw, p));
       }
       const h = isinAt(o.x, o.y, o.z, d, no, v.y), L = Math.max(0.05, h.t);
+      if (ben) oyun.lazerT = L;
       l.cizgi.position.copy(o).addScaledVector(d, L / 2);
       l.cizgi.quaternion.setFromUnitVectors(YUKARI, d);
       const kal = l.ince ? 0.3 : 1;   // kendi gözümden bakarken ince görünsün
@@ -598,6 +610,12 @@
       l.nokta.position.copy(o).addScaledVector(d, L);
     });
     lazerler.forEach((l, no) => { if (!gorulen.has(no)) { Sahne.scene.remove(l.cizgi, l.nokta); lazerler.delete(no); } });
+    // Üstten nişanda nişangâh lazerin bittiği noktada dursun
+    const ni = $('nisan'), bl = lazerler.get(oyun.benimNo);
+    if (ustenNisan() && bl) {
+      const e = bl.nokta.position.clone().project(Sahne.kamera);
+      ni.style.left = ((e.x + 1) / 2 * 100).toFixed(2) + '%'; ni.style.top = ((1 - e.y) / 2 * 100).toFixed(2) + '%';
+    } else if (ni.style.left) { ni.style.left = ''; ni.style.top = ''; }
   }
   function ates() {
     if (!oyun || oyun.rol !== 'serif' || !oyun.canli) return;
@@ -947,7 +965,9 @@
       const on = Kasaba.icerdeBina(oyun.x + Math.sin(oyun.yaw) * 0.18, oyun.z + Math.cos(oyun.yaw) * 0.18, Kasaba.katOf(oyun.y), 0.22) ? 0 : 0.18;   // duvara dayanınca içini görmesin
       k.position.set(oyun.x + Math.sin(oyun.yaw) * on, oyun.y + 1.66 * boy, oyun.z + Math.cos(oyun.yaw) * on);
     } else {
-      const yuk = oyun.canli ? 1.75 : 2.6, uzak = oyun.canli ? 3.6 : 5;
+      const nisanda = oyun.nisan && oyun.canli;
+      oyun.nisanUst = (oyun.nisanUst || 0) + ((nisanda ? 1 : 0) - (oyun.nisanUst || 0)) * 0.18;   // yumuşak geçiş
+      const yuk = oyun.canli ? 1.75 + 1.1 * oyun.nisanUst : 2.6, uzak = oyun.canli ? 3.6 : 5;
       // Omuz kayması: sağdaki duvara girmesin
       const kat = Kasaba.katOf(oyun.y), PAY = 0.28;   // kamera duvara en az bu kadar yaklaşır (yoksa duvarın içi görünür)
       let sag = 0.55;
@@ -967,6 +987,16 @@
       // Şerif odasındayken kamera çatının üstüne çıkmasın
       const so = Kasaba.serifOdasi;
       if (oyun.canli && Math.abs(oyun.x - so.x) < so.g / 2 && Math.abs(oyun.z - so.z) < so.d / 2) k.position.y = Math.min(k.position.y, so.y - 0.3);
+    }
+    if (oyun.kamera !== 'goz' && oyun.canli && !oyun.kameraYakin && oyun.nisanUst > 0.01 && v) {
+      // Üstten nişan: kamera yukarıda, lazerin ilerideki bir noktasına bakar (lazer düz kalır)
+      oyun.nisanMes = oyun.nisanMes ?? 15;
+      oyun.nisanMes += (Math.max(8, Math.min(35, oyun.lazerT ?? 15)) - oyun.nisanMes) * 0.1;
+      const { o } = silahIsini(v, oyun.yaw, oyun.pitch);
+      const duz = new THREE.Vector3(k.position.x + d.x * 20, k.position.y + d.y * 20, k.position.z + d.z * 20);
+      const hed = o.addScaledVector(d, oyun.nisanMes);
+      k.lookAt(duz.lerp(hed, oyun.nisanUst));
+      return;
     }
     k.lookAt(k.position.x + d.x, k.position.y + d.y, k.position.z + d.z);
   }

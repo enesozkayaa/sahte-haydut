@@ -264,6 +264,10 @@ const Karakter = (() => {
         Object.assign(p, { gx: 0.1 + sapla * 0.2, oR: -2.3 + sapla * 1.0, eR: -1.2 + sapla * 1.1, oL: -0.9, eL: -0.6, kL: -0.35, dL: 0.35, dR: 0.15 });
         break;
       }
+      case 'goster':   // tanık: katili parmağıyla gösterir
+        Object.assign(p, { oR: -1.55 + sn * 0.06, eR: 0, oL: -0.2, eL: -0.3, gx: -0.05 }); break;
+      case 'eller':    // üstü aranırken eller havada
+        Object.assign(p, { oL: -2.9, oR: -2.9, eL: -0.25, eR: -0.25, gx: -0.04 }); break;
       case 'tras':     // berber: usturayla tıraş eder
         Object.assign(p, { gx: 0.25, oR: -1.35 + sn * 0.12, eR: -0.7 + cs * 0.25, oL: -1.2, eL: -0.8 }); break;
       default:         // genel çalışma
@@ -303,8 +307,23 @@ const Karakter = (() => {
     c.eklenen.forEach(m => { if (m.parent) { m.parent.renderOrder = 0; m.parent.remove(m); } }); c.kenar.dispose(); c.xray.dispose();
     g.userData.cizgi = null;
   }
+  // Kanlı el: bıçaklayan haydudun elleri ve göğsü bir süre kanlı görünür
+  const kanMat = new THREE.MeshLambertMaterial({ color: '#d01010', emissive: '#4a0000' });   // parlak kırmızı: kırmızı kıyafette de seçilsin
+  function kanEkle(g, acik) {
+    const u = g.userData;
+    if (!acik) { (u.kan || []).forEach(m => m.parent?.remove(m)); u.kan = null; return; }
+    if (u.kan) return;
+    u.kan = [];
+    [u.kolL, u.kolR].forEach(k => {   // eller ve önkol kan içinde
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), kanMat); m.position.set(0, -0.31, 0); k.userData.dirsek.add(m); u.kan.push(m);
+      const o = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.12, 0.165), kanMat); o.position.set(0, -0.2, 0); k.userData.dirsek.add(o); u.kan.push(o);
+    });
+    const sirt = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.02), kanMat); sirt.position.set(-0.06, 1.18, -0.165); u.govdeG.add(sirt); u.kan.push(sirt);
+    const leke = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.02), kanMat); leke.position.set(0.08, 1.12, 0.165); u.govdeG.add(leke); u.kan.push(leke);
+    const leke2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.02), kanMat); leke2.position.set(-0.1, 1.0, 0.165); u.govdeG.add(leke2); u.kan.push(leke2);
+  }
   // Birinci şahıs görünümde kendi kafanı gizle
   function basGizle(g, gizli) { g.userData.bas.visible = !gizli; }
 
-  return { TIPLER, SERIF_TIP, ANIMLER, animKodu, yap, canlandir, cizgiEkle, cizgiKaldir, basGizle, elTabancasi, atesEt };
+  return { TIPLER, SERIF_TIP, ANIMLER, animKodu, yap, canlandir, cizgiEkle, cizgiKaldir, basGizle, elTabancasi, atesEt, kanEkle };
 })();

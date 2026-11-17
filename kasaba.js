@@ -10,7 +10,7 @@ const Kasaba = (() => {
   const ARA = 8;               // ara sokak x -8..8
   const KAT_Y = 3.2;           // üst katın zemin yüksekliği
   // Görev hareketleri (karakter.js pozları). Ağda h = 10 + sıra
-  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye', 'yas', 'ver', 'dua', 'bicak'];
+  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye', 'yas', 'ver', 'dua', 'bicak', 'goster', 'eller'];
   const animKodu = ad => 10 + Math.max(0, ANIMLER.indexOf(ad));
   const DUVAR = 0.4, KAPI = 2.2;
 

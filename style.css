@@ -30,6 +30,15 @@ label { font-weight: 800; font-size: 14px; }
 #ayarlar { display: grid; gap: 6px; }
 #ayarlar label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 #ayarlar select { padding: 6px 8px; }
+#ekler { border: 2px solid #0002; border-radius: 10px; padding: 6px 10px 8px; margin: 4px 0 0; display: grid; gap: 4px; }
+#ekler legend { font-weight: 900; padding: 0 4px; }
+#ekler legend small { font-weight: 700; opacity: .7; }
+#ayarlar #ekler label { justify-content: flex-start; align-items: flex-start; gap: 8px; cursor: pointer; }
+#ekler input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #b5651d; }
+#ekler span { display: grid; line-height: 1.15; }
+#ekler small { font-size: 12px; opacity: .75; font-weight: 600; }
+#durbunBtn.basili { background: #ffffff99 !important; }
+#durbunGoz { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, transparent 0 38vmin, #000d 40vmin); }
 #sonucListe { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
 #sonucListe li { background: #fff4dc; border-radius: 8px; padding: 7px 10px; font-weight: 800; display: flex; justify-content: space-between; }
 

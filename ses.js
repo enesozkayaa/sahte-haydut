@@ -38,6 +38,10 @@ const Ses = (() => {
     posta() { [1568, 1175, 1568].forEach((f, i) => ton(f, 0.35, 'sine', 0.14, i * 0.16)); },   // posta zili
     // Koşan birinin ayak sesi (s: 0..1 yakınlık). Toprak zeminde tok bir 'tap'
     adim(s = 1) { if (s < 0.03) return; gurultu(0.07, 0.55 * s, 500 + Math.random() * 300); ton(70 + Math.random() * 25, 0.06, 'sine', 0.12 * s); },
+    // Köpek: s = yakınlık 0..1
+    havla(s = 1) { if (s < 0.03) return; [0, 0.28, 0.5].forEach(g => { ton(620, 0.12, 'sawtooth', 0.12 * s, g, -330); gurultu(0.1, 0.35 * s, 900, 'bandpass', g); }); },
+    inle() { ton(700, 0.5, 'sine', 0.08, 0, -250); },
+    kelepce() { ton(1800, 0.05, 'square', 0.06); ton(1400, 0.06, 'square', 0.06, 0.08); gurultu(0.12, 0.3, 3000, 'highpass', 0.04); },
     tik() { ton(1200, 0.03, 'square', 0.03); },
     kazandi() { [392, 523, 659, 784, 1046].forEach((f, i) => ton(f, 0.25, 'triangle', 0.13, i * 0.12)); },
     kaybetti() { [392, 330, 262, 196].forEach((f, i) => ton(f, 0.3, 'triangle', 0.12, i * 0.16)); },

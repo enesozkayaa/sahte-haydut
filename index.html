@@ -40,6 +40,7 @@
           <li><b>Haydut:</b> sarı işaretli yerlerde görev yap (yaklaş, <b>E</b> veya 🎯 tuşu). Görevi yaparken yerinden kıpırdama. Takım arkadaşlarını yeşil çizgiyle görürsün. Terzide kılık değiştirebilirsin. 🔴 Ağır suçlar (banka, zehir, dinamit…) aranma seviyeni 1 artırır, 🟡 normal işler (dans, yemek, at beslemek…) 1 düşürür. Aranma yükseldikçe şerifler posta kutusundan görevleri daha çabuk öğrenir (0: 15 sn … 6: hemen). Şerifler bu seviyeyi 5-10 sn geç “🔎 İpucu seviyesi” olarak görür; 5 ve 6'da görevin yeri haritalarında kırmızı yanar. Her görevin kendi hareketi var (çekiç vurma, zehir dökme, berber koltuğunda oturma…), kasabalılar da aynısını yapar. Görev listesinde bir kereliğe özel <b>🔍 Kalan görevleri göster</b> hakkın var.</li>
           <li><b>Şerif:</b> görev yapılınca sana haber gelmez. En az 10 saniye sonra 📬 posta kutularındaki sayı artar ve zil çalar; hangi görev olduğunu görmek için bir kutuya git, E'ye bas. O sırada orada kim vardı, düşün ve vur. Masum kasabalıyı vurursan hakkın azalır; biterse hapse girersin. 📡 Muhbir (1 kere): bir sonraki yapılan görevin adı ve yeri hemen gelir. 📋 Görev listesinde bütün görevler yazar; hangilerinin yapıldığını görmek için kasabadaki 📬 posta kutularına gidip E'ye bas (bilgi en az 10 sn geriden gelir, kutunun üstünde de yapılan görev sayısı yazar). Sağ tıkla (telefonda 🔦) nişan alırsın; lazeri herkes görür.</li>
           <li>Oyun başında görev hedefi kadar görev seçilir (ör. 8); sadece onlar yapılır.</li>
+          <li><b>🕵️ Şerife yardımcı özellikler</b> (oda sahibi bekleme odasında seçer): 🩸 kanlı el, 🗺️ ceset haritada, 💨 toz bulutu, 🔎 üst arama (E), 🔭 dürbün (Z), 🐕 köpek (B), 👉 tanıklar, 📬 hızlı posta.</li>
           <li><b>Kazanma:</b> haydutlar bütün görevleri yaparsa ya da süre biterse kazanır. Şerifler bütün haydutları vurursa kazanır.</li>
           <li>🎤 Yakınındakiler seni duyar. 📻 Telsizi açınca sadece takımın duyar. Ölenler sadece ölüleri duyar.</li>
           <li>Oyun başında şerifler 15 saniye kilitli bir odada bekler; kapı açılınca kasabaya çıkarlar.</li>
@@ -68,6 +69,17 @@
         <label>🔪 Bıçaklanacak kasabalı <select id="ayOldur"><option value="0">Yok</option><option>3</option><option selected>5</option><option>10</option></select></label>
         <label>👥 Kasabalı sayısı <select id="ayKasabali"><option value="30">30</option><option value="45" selected>45</option><option value="60">60</option></select></label>
         <label>👔 Kılık değiştirme hakkı <select id="ayKilik"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
+        <fieldset id="ekler">
+          <legend>🕵️ Şerife yardımcı özellikler <small>(seçtiklerin oyunda olur)</small></legend>
+          <label><input type="checkbox" id="ekKan"> <span>🩸 Kanlı el<small>Bıçaklayan haydudun eli ve gömleği 25 sn kanlı görünür</small></span></label>
+          <label><input type="checkbox" id="ekCeset"> <span>🗺️ Ceset haritada<small>Biri bıçaklanınca yeri şeriflerin haritasında 6 sn yanar</small></span></label>
+          <label><input type="checkbox" id="ekToz"> <span>💨 Toz bulutu<small>Koşan herkes toz kaldırır, koşmak uzaktan görünür</small></span></label>
+          <label><input type="checkbox" id="ekArama"> <span>🔎 Üst arama<small>Şerif birine yanaşıp E ile 3 sn üstünü arar. Haydutsa yakalanır, masumsa şerif 5 sn bekler</small></span></label>
+          <label><input type="checkbox" id="ekDurbun"> <span>🔭 Dürbün<small>Şerif Z ile uzağı yakından görür</small></span></label>
+          <label><input type="checkbox" id="ekKopek"> <span>🐕 Köpek<small>Şerif 2 kez köpeği koklatır (B): 10 m içinde haydut varsa havlar</small></span></label>
+          <label><input type="checkbox" id="ekTanik"> <span>👉 Tanıklar<small>Bıçaklamayı gören kasabalılar 7 sn katili parmakla gösterir</small></span></label>
+          <label><input type="checkbox" id="ekPosta"> <span>📬 Hızlı posta<small>Görev haberleri posta kutusuna yarı sürede düşer</small></span></label>
+        </fieldset>
       </div>
       <p id="ayarOzet" class="durum"></p>
       <div class="satir">
@@ -92,6 +104,7 @@
     <div id="gorevPanel"><button id="gorevPanelBtn">📋 Görevler</button><ul id="gorevListe" class="gizli"></ul></div>
     <div id="toast"></div>
     <canvas id="harita" width="300" height="300"></canvas>
+    <div id="durbunGoz" class="gizli"></div>
     <div id="nisan"></div>
     <div id="ilerleme" class="gizli"><span id="ilerlemeYazi"></span><div><i id="ilerlemeCubuk"></i></div></div>
     <button id="eylemBtn" class="gizli"></button>
@@ -100,6 +113,8 @@
       <button id="kosBtn" class="dokunmatik">🏃</button>
       <button id="muhbirBtn" class="gizli">📡</button>
       <button id="nisanBtn" class="gizli">🔦</button>
+      <button id="durbunBtn" class="gizli" title="Dürbün (Z)">🔭</button>
+      <button id="kopekBtn" class="gizli" title="Köpek (B)">🐕</button>
     </div>
     <div id="ustSag">
       <button id="kameraBtn" title="Kamera (V)">👁️</button>

@@ -80,17 +80,17 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 38;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 39;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
   const ekId = k => 'ek' + k[0].toUpperCase() + k.slice(1);
   const ED_ADLAR = [...document.querySelectorAll('[id^="ed_"]')].map(e => e.id.slice(3));   // her özelliğin süre/sayı seçimleri
-  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayOldur', 'ayKasabali', 'ayKilik', ...ED_ADLAR.map(a => 'ed_' + a), ...EKLER.map(ekId)].forEach(id => $(id)?.addEventListener('change', () => ayarYay()));
+  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayOldur', 'ayKasabali', 'ayKilik', 'ayTilavet', ...ED_ADLAR.map(a => 'ed_' + a), ...EKLER.map(ekId)].forEach(id => $(id)?.addEventListener('change', () => ayarYay()));
   function ayarOku() {
-    return { rolMod: $('ayRolMod').value, haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value, oldur: +$('ayOldur').value, ed: Object.fromEntries(ED_ADLAR.map(a => [a, +$('ed_' + a).value])), ek: Object.fromEntries(EKLER.map(k => [k, !!$(ekId(k))?.checked])) };
+    return { rolMod: $('ayRolMod').value, haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value, oldur: +$('ayOldur').value, tilavet: ($('ayTilavet')?.value ?? '1') === '1', ed: Object.fromEntries(ED_ADLAR.map(a => [a, +$('ed_' + a).value])), ek: Object.fromEntries(EKLER.map(k => [k, !!$(ekId(k))?.checked])) };
   }
-  const ayarYazi = a => `${a.rolMod === 'rastgele' ? `🎲 Rastgele: 🦹 ${a.haydut} haydut · ⭐ ${Math.max(1, Ag.oyuncular.length - a.haydut)} şerif` : '🎭 Roller: herkes kendi seçer'} · 🔫 ${a.hak} hak · ⏱️ ${a.sure} dk · 🎯 ${a.hedef} görev${a.oldur ? ` · 🔪 ${a.oldur} kişi` : ''} · 👥 ${a.kasabali} kasabalı · 👔 ${a.kilik} kılık${(() => { const l = EKLER.filter(k => a.ek?.[k]); return l.length ? ' · 🕵️ ' + l.map(k => EK_EMOJI[k]).join('') + (a.ek?.arama ? ` (🔎×${a.ed?.aramaHak || 2})` : '') : ''; })()}`;
+  const ayarYazi = a => `${a.rolMod === 'rastgele' ? `🎲 Rastgele: 🦹 ${a.haydut} haydut · ⭐ ${Math.max(1, Ag.oyuncular.length - a.haydut)} şerif` : '🎭 Roller: herkes kendi seçer'} · 🔫 ${a.hak} hak · ⏱️ ${a.sure} dk · 🎯 ${a.hedef} görev${a.oldur ? ` · 🔪 ${a.oldur} kişi` : ''} · 👥 ${a.kasabali} kasabalı · 👔 ${a.kilik} kılık${a.tilavet === false ? ' · 🔇 tilavet kapalı' : ''}${(() => { const l = EKLER.filter(k => a.ek?.[k]); return l.length ? ' · 🕵️ ' + l.map(k => EK_EMOJI[k]).join('') + (a.ek?.arama ? ` (🔎×${a.ed?.aramaHak || 2})` : '') : ''; })()}`;
   function ayarYay(listedenGeldi) {
     if (!Ag.evMi) return;
     const a = ayarOku(), degisti = a.rolMod !== lobiAyar.rolMod; lobiAyar = a;
@@ -540,7 +540,8 @@
     let en = null, ed = 2.4;
     if (oyun.rol === 'haydut' && oyun.hedefler.size) {   // kırmızı çerçeveli hedef kasabalı yakındaysa bıçakla
       const b = Kasaba.icBina(oyun.x, oyun.z); let hd = 1.9;
-      oyun.hedefler.forEach(no => { const v = varliklar.get(no); if (!v || v.durum !== 0 || Math.abs(v.y - oyun.y) > 1.2 || Kasaba.icBina(v.x, v.z) !== b) return; const d = Math.hypot(v.x - oyun.x, v.z - oyun.z); if (d < hd) { hd = d; en = { tur: 'oldur', no, v }; } });
+      const camide = (x, z) => Kasaba.icBina(x, z)?.id === 'kilise';   // camide bıçaklanmaz; hedef aynı kalır, çıkınca yine bıçaklanabilir
+      if (!camide(oyun.x, oyun.z)) oyun.hedefler.forEach(no => { const v = varliklar.get(no); if (!v || v.durum !== 0 || Math.abs(v.y - oyun.y) > 1.2 || Kasaba.icBina(v.x, v.z) !== b || camide(v.x, v.z)) return; const d = Math.hypot(v.x - oyun.x, v.z - oyun.z); if (d < hd) { hd = d; en = { tur: 'oldur', no, v }; } });
       if (en) return en;
     }
     const bina = Kasaba.icBina(oyun.x, oyun.z);   // duvarın öbür yanındaki görev yapılamaz: aynı binada (ya da ikiniz de dışarıda) olmalısınız
@@ -670,7 +671,7 @@
     const px = oyun && oyun.canli ? oyun.x : Sahne.kamera.position.x, pz = oyun && oyun.canli ? oyun.z : Sahne.kamera.position.z;
     const p = Kasaba.yerel(b, px, pz), dis = Math.max(0, Math.abs(p.u) - b.g / 2, Math.abs(p.w) - b.d / 2);
     let hedef = Kasaba.icBina(px, pz) === b ? 0.6 : Math.max(0, 0.22 * (1 - dis / 14));
-    if (!Ses.acik || !oyun) hedef = 0;
+    if (!Ses.acik || !oyun || oyun.ayar.tilavet === false) hedef = 0;   // oda sahibi kapattıysa hiç çalmaz
     if (hedef > 0 && !tilavet) {
       tilavet = new Audio(TILAVET[tilavetSira]); tilavet.volume = 0;
       tilavet.onended = () => { tilavetSira = (tilavetSira + 1) % TILAVET.length; tilavet.src = TILAVET[tilavetSira]; tilavet.play().catch(() => {}); };

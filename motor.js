@@ -137,6 +137,7 @@ const Motor = (() => {
         const h = o.varliklar.get(m.no), simdi = Date.now();
         if (!o.kapiAcildi || !h || !o.hedefBotlar.has(m.no) || h.durum !== 0 || h.oyuncuId || simdi - (p.sonBicak || 0) < 1500) return;
         if (Math.hypot(h.x - v.x, h.z - v.z) > 2.6 || Math.abs((h.y || 0) - (v.y || 0)) > 1.2 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(h.x, h.z)) return;
+        if (Kasaba.icBina(h.x, h.z)?.id === 'kilise' || Kasaba.icBina(v.x, v.z)?.id === 'kilise') return;   // camide bıçaklama yok
         p.sonBicak = simdi;
         h.durum = 3; h.h = 0; h.olumZaman = simdi; h.yol = null; h.yaw = Math.atan2(h.x - v.x, h.z - v.z);   // ceset oyun boyunca yerde kalır
         o.hedefBotlar.delete(m.no); o.oldurulen++;

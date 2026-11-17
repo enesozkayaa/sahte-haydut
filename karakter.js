@@ -9,7 +9,7 @@ const Karakter = (() => {
     { ad: 'Barmen', ten: '#d9a37e', gomlek: '#f2f2ee', yelek: '#1d1d22', pantolon: '#1d1d22', sapka: 'kel', onluk: '#ffffff', bıyık: '#2a1a10', buyukBiyik: true, gen: 1.12 },
     { ad: 'Saloon Kızı', ten: '#f0c8a8', elbise: '#b5243b', gomlek: '#b5243b', sac: '#7a2a1a', sapka: 'topuz', tuy: '#f5d76e', boy: 0.95 },
     { ad: 'Madenci', ten: '#c99573', gomlek: '#7a7f86', yelek: '#4a6fa5', pantolon: '#4a6fa5', sapka: 'baret', sapkaRenk: '#6b4a2a', sakal: '#bdbdbd', uzunSakal: true },
-    { ad: 'İmam', ten: '#e8c0a0', gomlek: '#2f3d33', pantolon: '#2f3d33', elbise: '#2f3d33', sapka: 'sarik', sapkaRenk: '#f4f1e8', sakal: '#3a2a1a', boy: 1.04 },
+    { ad: 'İmam', ten: '#e8c0a0', gomlek: '#1f2a44', pantolon: '#1f2a44', elbise: '#1f2a44', cubbe: '#f4f1e8', sapka: 'sarik', sapkaRenk: '#fbfaf5', sakal: '#4a3a2a', boy: 1.04 },
     { ad: 'Doktor', ten: '#f1cfb0', gomlek: '#6c6f75', yelek: '#53565c', pantolon: '#4a4c52', sapka: 'silindir', sapkaRenk: '#141418', gozluk: true, bıyık: '#8a6a4a', canta: '#3a2416' },
     { ad: 'Çiftçi', ten: '#c98d5f', gomlek: '#4f8a3c', yelek: '#8a5a2c', pantolon: '#8a5a2c', sapka: 'hasir', sapkaRenk: '#e2c46b', askili: true },
     { ad: 'Demirci', ten: '#b57a55', gomlek: '#b57a55', onluk: '#5a3820', pantolon: '#26262a', sapka: 'kel', sakal: '#1a1410', gen: 1.25, boy: 1.05, ciplakKol: true },
@@ -52,6 +52,11 @@ const Karakter = (() => {
     if (t.bandana) parca(kutu(0.3, 0.1, 0.32), t.bandana, 0, 1.52, 0.01, govdeG);
     if (t.sal) parca(kutu(0.6 * gen, 0.2, 0.36), t.sal, 0, 1.43, 0, govdeG);
     if (t.elbise) parca(silindir(0.27 * gen, 0.42 * gen, 0.9, 12), t.elbise, 0, 0.47, 0, govdeG);
+    if (t.cubbe) {   // cübbenin önü: beyaz iç entari ve sırma kenarlar
+      parca(kutu(0.16, 0.64, 0.04), t.cubbe, 0, 1.18, 0.165, govdeG);
+      [-1, 1].forEach(s => parca(kutu(0.03, 0.64, 0.05), '#c9a23a', s * 0.095, 1.18, 0.168, govdeG));
+      if (t.elbise) { parca(kutu(0.18, 0.86, 0.04), t.cubbe, 0, 0.45, 0.33, govdeG).rotation.x = -0.17; }
+    }
     if (t.canta) parca(kutu(0.3, 0.2, 0.14), t.canta, -0.4 * gen, 0.85, 0.05, govdeG);
     if (serif) {   // büyük altın yıldız
       [0, Math.PI / 4].forEach(a => { const y = parca(kutu(0.12, 0.12, 0.03), '#ffd23f', -0.13, 1.33, 0.2, govdeG); y.rotation.z = a; });
@@ -78,7 +83,7 @@ const Karakter = (() => {
     if (t.baston) { const b = parca(silindir(0.025, 0.025, 0.9, 6), '#5a3a1a', 0, -0.64, 0.06, kolR.userData.dirsek); b.rotation.x = 0.1; }
     if (serif) tabancaEkle(kolR.userData.dirsek);
     // Görev eşyaları (sadece görevde görünür): çekiç ve zehir şişesi
-    let cekic = null, sise = null, bicak = null;
+    let cekic = null, sise = null, bicak = null, supurge = null;
     if (!serif) {
       const d = kolR.userData.dirsek;
       cekic = new THREE.Group(); cekic.position.set(0, -0.34, 0.02); d.add(cekic);
@@ -87,7 +92,10 @@ const Karakter = (() => {
       parca(silindir(0.065, 0.065, 0.26, 8), '#2f8a3a', 0, -0.08, 0, sise); parca(silindir(0.025, 0.03, 0.1, 6), '#2f8a3a', 0, -0.26, 0, sise); parca(kutu(0.1, 0.06, 0.02), '#f2f2f2', 0, -0.06, 0.066, sise);
       bicak = new THREE.Group(); bicak.position.set(0, -0.36, 0.03); d.add(bicak);   // bıçak: sadece bıçaklarken görünür
       parca(kutu(0.04, 0.1, 0.05), '#3a2414', 0, 0, 0, bicak); parca(kutu(0.1, 0.02, 0.06), '#8a8a92', 0, -0.06, 0, bicak); parca(kutu(0.015, 0.05, 0.3), '#e4e8ee', 0, -0.03, 0.17, bicak);
-      cekic.visible = sise.visible = bicak.visible = false;
+      supurge = new THREE.Group(); supurge.position.set(0, -0.36, 0.04); d.add(supurge);   // süpürge: sadece süpürürken
+      parca(silindir(0.025, 0.025, 1.25, 6), '#9a6a3a', 0, -0.45, 0.1, supurge).rotation.x = 0.25;
+      const fir = parca(kutu(0.34, 0.22, 0.08), '#d8b860', 0, -1.05, 0.26, supurge); fir.rotation.x = 0.25;
+      cekic.visible = sise.visible = bicak.visible = supurge.visible = false;
     }
     // Baş
     const bas = new THREE.Group(); bas.position.set(0, 1.72, 0); govdeG.add(bas);
@@ -113,14 +121,19 @@ const Karakter = (() => {
         parca(silindir(0.205, 0.205, 0.05, 12), '#c9a23a', 0, 0.21, 0, bas);
         break;
       }
-      case 'sarik': { const s = parca(kure(0.21, 12), sr, 0, 0.17, 0, bas); s.scale.set(1, 0.62, 1); parca(silindir(0.2, 0.2, 0.06, 12), sr, 0, 0.1, 0, bas); parca(kure(0.07, 8), '#8a2a2a', 0, 0.27, 0, bas); break; }
+      case 'sarik': {   // beyaz sarık: sarılmış katlar + kırmızı kavuk tepesi
+        const s = parca(kure(0.22, 14), sr, 0, 0.18, 0, bas); s.scale.set(1, 0.6, 1);
+        parca(silindir(0.205, 0.215, 0.07, 14), sr, 0, 0.1, 0, bas);
+        const kat = parca(silindir(0.222, 0.222, 0.045, 14), '#ece9df', 0, 0.16, 0, bas); kat.rotation.z = 0.12;
+        parca(silindir(0.09, 0.11, 0.1, 10), '#8a1f1f', 0, 0.29, 0, bas); break;
+      }
       case 'duz': parca(silindir(0.34, 0.34, 0.04, 14), sr, 0, 0.17, 0, bas); parca(silindir(0.15, 0.15, 0.1, 10), sr, 0, 0.22, 0, bas); break;
       case 'topuz': parca(kure(0.11, 10), t.sac, 0, 0.2, -0.1, bas); if (t.tuy) { const f = parca(kutu(0.04, 0.22, 0.03), t.tuy, 0.1, 0.27, -0.05, bas); f.rotation.z = -0.4; } break;
       default: parca(kutu(0.31, 0.06, 0.31), t.ten, 0, 0.17, 0, bas);   // kel
     }
     const boy = t.boy || 1;
     g.scale.set(1, boy, 1);
-    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0, cekic, sise, bicak };
+    g.userData = { tipNo, govdeG, bacakL, bacakR, kolL, kolR, bas, faz: Math.random() * 6, cizgi: null, olum: 0, serif, atesT: 0, cekic, sise, bicak, supurge };
     return g;
   }
 
@@ -163,7 +176,7 @@ const Karakter = (() => {
     const yum = (a, b, k = 12) => a + (b - a) * Math.min(1, dt * k);
     const dizL = u.bacakL.userData.diz, dizR = u.bacakR.userData.diz;
     const dirL = u.kolL.userData.dirsek, dirR = u.kolR.userData.dirsek;
-    if (u.cekic) { u.cekic.visible = h === 10 + ANIMLER.indexOf('dov'); u.sise.visible = h === 10 + ANIMLER.indexOf('dok'); u.bicak.visible = h === 10 + ANIMLER.indexOf('bicak'); }
+    if (u.cekic) { u.cekic.visible = h === 10 + ANIMLER.indexOf('dov'); u.sise.visible = h === 10 + ANIMLER.indexOf('dok'); u.bicak.visible = h === 10 + ANIMLER.indexOf('bicak'); if (u.supurge) u.supurge.visible = h === 10 + ANIMLER.indexOf('supur'); }
     if (h < 10) u.sonAnim = null;
     if (h >= 10) { gorevPozu(u, ANIMLER[h - 10] || 'calis', dt, yum, dizL, dizR, dirL, dirR); return; }
     if (h === 3) {   // görev yapıyor: kollar önde, dirsekler bükük, elleri bir şeyle uğraşıyor
@@ -256,8 +269,13 @@ const Karakter = (() => {
         Object.assign(p, { gx: 0.32 + sn * 0.04, oL: -0.55, oR: -0.55, eL: -1.25, eR: -1.25 }); break;
       case 'ver':      // barmene para uzatır
         Object.assign(p, { gx: 0.1, oR: -1.4 + sn * 0.1, eR: -0.15, oL: -0.25, eL: -0.3 }); break;
-      case 'dua':      // diz çöküp oturur, ellerini göğüs hizasında avuçları yukarı açar
-        Object.assign(p, { kL: 0, kR: 0, dL: 1.57, dR: 1.57, gy: -0.4, gx: 0.06 + sn * 0.02, oL: -0.55, oR: -0.55, eL: -1.15, eR: -1.15 }); break;
+      case 'dua':      // ayakta, elleri öne doğru avuçları yukarı açık
+        Object.assign(p, { gx: 0.03 + sn * 0.012, oL: -0.85, oR: -0.85, eL: -0.75, eR: -0.75 }); break;
+      case 'supur': {  // süpürgeyle sağa sola süpürür
+        Object.assign(p, { gx: 0.3, oL: -0.75 + sn * 0.3, oR: -0.95 + sn * 0.3, eL: -0.35, eR: -0.25, kL: -0.15, dL: 0.2, dR: 0.15 });
+        u.govdeG.rotation.y = sn * 0.35;
+        break;
+      }
       case 'bicak': {  // tek vuruş: bıçağı kaldırır, bir kez saplar, öyle kalır
         if (u.sonAnim !== 'bicak') u.bicakBas = f;
         const d = Math.min(1, (f - u.bicakBas) / 4.2);   // ~0,7 sn
@@ -280,7 +298,7 @@ const Karakter = (() => {
     u.kolL.rotation.x = yum(u.kolL.rotation.x, p.oL, 12); dirL.rotation.x = yum(dirL.rotation.x, p.eL, 12);
     if (!u.serif) { u.kolR.rotation.x = yum(u.kolR.rotation.x, p.oR, anim === 'dov' ? 20 : 12); dirR.rotation.x = yum(dirR.rotation.x, p.eR, 12); dirR.rotation.y = yum(dirR.rotation.y, p.sR, 12); }
     u.govdeG.rotation.x = yum(u.govdeG.rotation.x, p.gx, 10); u.govdeG.position.y = yum(u.govdeG.position.y, p.gy, 10);
-    if (anim !== 'dans') u.govdeG.rotation.y = yum(u.govdeG.rotation.y, 0, 10);
+    if (anim !== 'dans' && anim !== 'supur') u.govdeG.rotation.y = yum(u.govdeG.rotation.y, 0, 10);
     if (u.sise) u.sise.rotation.x = anim === 'dok' ? 1.9 + Math.sin(f * 0.7) * 0.25 : 0;   // şişe ağzı aşağı
     u.sonAnim = anim;
   }

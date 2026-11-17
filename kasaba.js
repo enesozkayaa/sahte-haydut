@@ -10,7 +10,7 @@ const Kasaba = (() => {
   const ARA = 8;               // ara sokak x -8..8
   const KAT_Y = 3.2;           // üst katın zemin yüksekliği
   // Görev hareketleri (karakter.js pozları). Ağda h = 10 + sıra
-  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye', 'yas', 'ver', 'dua', 'bicak', 'goster', 'eller'];
+  const ANIMLER = ['calis', 'ara', 'cevir', 'uzan', 'yirt', 'kes', 'dov', 'dok', 'cok', 'otur', 'kumar', 'tras', 'dans', 'besle', 'ye', 'yas', 'ver', 'dua', 'bicak', 'goster', 'eller', 'supur'];
   const animKodu = ad => 10 + Math.max(0, ANIMLER.indexOf(ad));
   const DUVAR = 0.4, KAPI = 2.2;
 
@@ -88,6 +88,8 @@ const Kasaba = (() => {
   const dunya = (b, u, w) => ({ x: b.x + u * isaret(b), z: b.z + w * isaret(b) });
   const yonDunya = (b, a) => a + (b.kapi === 'k' ? Math.PI : 0);      // yerel yön (0 = ön) → dünya
   // İki katlı binalarda merdiven: sol duvar boyunca, alt ucu öne, üst ucu arkaya bakar
+  // Cami: kıble duvarı sol yan duvar. Minber kıbleye dayalı, merdiveni salona iner (çıkılır)
+  const minber = b => { const qu = -b.g / 2 + DUVAR / 2; return { qu, w: -3.2, u0: qu, u1: qu + 1.0, u2: qu + 3.6, h: 1.4, yari: 0.48 }; };
   const merdiven = b => ({ u1: -b.g / 2 + DUVAR / 2, u2: -b.g / 2 + 1.9, wAlt: b.d / 2 - 2.4, wUst: -b.d / 2 + 1.4 });
   const duvarY = b => (b.ic === 2 ? Math.max(b.y * 0.78, 6.9) : b.y * 0.78);
 
@@ -134,15 +136,17 @@ const Kasaba = (() => {
     G('yemek', 'Otelde yemek ye', 'Otelde biri yemek yedi', '🍽️', 5, icNokta('otel', -4, 1.6, 0, 0), 'ye'),
     G('yas', 'Tabutun başında yas tut', 'Mezarlıkta biri yas tuttu', '⚰️', 5, { x: 42, z: 61.7, yon: Math.PI }, 'yas'),
     G('rusvet', 'Barmene rüşvet ver', 'Salonda barmene rüşvet verildi', '💵', 4, icNokta('salon', 6.5, -1.9), 'ver'),
-    G('dua', 'Camide dua et', 'Camide biri dua etti', '🤲', 5, icNokta('kilise', 0, -5.2), 'dua'),
+    G('dua', 'Camide dua et', 'Camide biri dua etti', '🤲', 5, icNokta('kilise', -2.5, 1.5, 0, -Math.PI / 2), 'dua'),
+    G('temizlik', 'Camiyi süpür', 'Camide biri temizlik yaptı', '🧹', 5, icNokta('kilise', 3.2, 2.5, 0, Math.PI / 2), 'supur'),
     G('vergi', 'İlan tahtasına sahte vergi duyurusu as', 'İlan tahtasına sahte vergi duyurusu asıldı', '📢', 4, { x: -14, z: 8.3, yon: 0 }, 'uzan'),
     G('icki', 'Salonun içkisini sulandır', 'Salonun içkisi sulandırıldı', '🍺', 4, icNokta('salon', 1.4, -1.9), 'dok'),
   ];
   // Berber ustası koltuğun arkasında durur (müşteri oturunca tıraş eder)
   const berberUsta = icNokta('berber', 2, -1.75);
-  const barmenYeri = icNokta('salon', 5.2, -4.7, 0, 0);   // barın arkasında, salona bakar
+  const barmenYeri = icNokta('salon', 5.2, -4.7, 0, 0);
+  const imamYeri = (() => { const b = binaBul('kilise'), m = minber(b); return { ...icNokta('kilise', m.u0 + 0.5, m.w, 0, Math.PI / 2), y: m.h }; })();   // minberin üstünde, cemaate bakar   // barın arkasında, salona bakar
   // Berber ustası, barmen ve mezarlıktaki tabut katıdır (içlerinden geçilmez)
-  engeller.push({ tur: 'kisi', x: berberUsta.x, z: berberUsta.z, r: 0.35 }, { tur: 'kisi', x: barmenYeri.x, z: barmenYeri.z, r: 0.35 }, { tur: 'tabut', x: 42, z: 60.1, r: 0.75 });
+  engeller.push({ tur: 'kisi', x: berberUsta.x, z: berberUsta.z, r: 0.35 }, { tur: 'kisi', x: barmenYeri.x, z: barmenYeri.z, r: 0.35 }, { tur: 'tabut', x: 42, z: 60.1, r: 0.75 }, { tur: 'kisi', x: imamYeri.x, z: imamYeri.z, r: 0.35 });
   // Kılık değiştirme noktaları
   // Ağır suçlar: aranma seviyesini 1 artırır (diğerleri 1 düşürür). Simgeleri kırmızı çerçeveli.
   const AGIR = new Set(['banka', 'zehir', 'dinamit', 'kibrit', 'su', 'at', 'tabanca', 'anahtar', 'kasa', 'rusvet']);
@@ -204,7 +208,7 @@ const Kasaba = (() => {
         k(2.2, 2.2, 0.9, 4, 1.1, -d2 + 0.75, metal); k(0.5, 0.5, 0.1, 4, 1.2, -d2 + 1.25, '#c9a23a', { carp: false });   // kasa
         k(6, 1.1, 0.7, -2, 0.55, -1, ahsap); break;                                                                       // gişe
       case 'salon':
-        k(7, 1.1, 0.8, 4, 0.55, -3.2, ahsap); k(7, 1.6, 0.4, 4, 2, -d2 + 0.4, koyu2, { carp: true, taban: 0 });           // bar ve raf
+        k(7, 1.1, 0.8, 4, 0.55, -3.2, ahsap); k(6, 1.6, 0.4, 4.6, 2, -d2 + 0.4, koyu2, { carp: true, taban: 0 });           // bar ve raf
         for (let i = 0; i < 6; i++) k(0.12, 0.35, 0.12, 1.5 + i, 1.3, -3.2, i % 2 ? '#3a7a3a' : '#7a3a20', { carp: false });
         masa(-2, 2); masa(3, 3); k(1.6, 1.3, 0.6, -5.5, 0.65, -d2 + 0.5, koyu2);                                          // masalar, piyano
         masa(4.15, -2, KY, yesil); masa(-2, 2, KY); break;                                                                // üst kat kumar masası
@@ -216,45 +220,52 @@ const Kasaba = (() => {
       case 'belediye':
         masa(-2, -2); k(1.2, 2, 0.6, 3, KY + 1, -d2 + 0.5, ahsap); masa(3, -3, KY); break;                                // üst kat dolap ve masa
       case 'postane':
-        k(6, 1.1, 0.7, 0, 0.55, -2, ahsap); [-2, 0, 2].forEach(x => k(0.6, 0.6, 0.6, x + 3, 0.3, -d2 + 0.8, '#9a7a4a')); break;
+        k(6, 1.1, 0.7, 0, 0.55, -2, ahsap); [2, 3, 4].forEach(x => k(0.6, 0.6, 0.6, x, 0.3, -d2 + 0.8, '#9a7a4a')); break;
       case 'silahci':
-        k(5, 1.1, 0.7, 0, 0.55, -1.8, ahsap); k(5, 1.6, 0.2, 2, 1.6, -d2 + 0.3, koyu2, { carp: true, taban: 0 });
-        for (let i = 0; i < 5; i++) k(0.08, 1.1, 0.08, 0.2 + i * 0.8, 1.6, -d2 + 0.45, metal, { carp: false }); break;    // tüfek rafı
+        k(5, 1.1, 0.7, 0, 0.55, -1.8, ahsap); k(4, 1.6, 0.2, 3.4, 1.6, -d2 + 0.3, koyu2, { carp: true, taban: 0 });
+        for (let i = 0; i < 5; i++) k(0.08, 1.1, 0.08, 1.8 + i * 0.8, 1.6, -d2 + 0.45, metal, { carp: false }); break;    // tüfek rafı
       case 'firin':
         k(2, 1.6, 1.2, -2.5, 0.8, -d2 + 0.8, '#9a4a2a'); k(0.8, 0.5, 0.1, -2.5, 0.8, -d2 + 1.42, '#ff7a2a', { isik: '#aa4a10', carp: false });
-        k(3, 1.2, 0.6, 2.5, 0.6, -d2 + 0.5, ahsap); for (let i = 0; i < 4; i++) k(0.4, 0.2, 0.3, 1.4 + i * 0.7, 1.3, -d2 + 0.5, '#e2a85a', { carp: false }); break;
+        k(3, 1.2, 0.6, 3, 0.6, -d2 + 0.5, ahsap); for (let i = 0; i < 4; i++) k(0.4, 0.2, 0.3, 1.95 + i * 0.7, 1.3, -d2 + 0.5, '#e2a85a', { carp: false }); break;
       case 'serif':   // hapishane parmaklıkları ve masa
         for (let i = 0; i < 7; i++) k(0.08, 2.4, 0.08, -g2 + 0.6 + i * 0.5, 1.2, -1.5, metal, { carp: false });
         k(3.1, 2.4, 0.12, -g2 + 2.1, 1.2, -1.5, metal, { carp: true, gizli: true });                                     // parmaklık hattı (görünmez engel)
         k(3.6, 0.1, 0.1, -g2 + 2.1, 2.4, -1.5, metal, { carp: false }); masa(3, 1); k(0.3, 0.06, 0.2, -3, 1.2, -d2 + 0.3, '#c9a23a', { carp: false }); break;
       case 'terzi':   // mankenler ve kumaş rafı
         [[-2.5, -1], [-1, 1.5]].forEach(([x, z]) => { k(0.5, 1.1, 0.35, x, 1.2, z, '#c06090', { carp: true, taban: 0 }); k(0.08, 0.6, 0.08, x, 0.3, z, ahsap, { carp: false }); });
-        k(3, 1.8, 0.5, 2.5, 0.9, -d2 + 0.35, ahsap); ['#c94f3d', '#4a6fa5', '#4f8a3c'].forEach((c, i) => k(0.8, 0.3, 0.4, 1.6 + i * 0.9, 1.3, -d2 + 0.4, c, { carp: false })); break;
+        k(3, 1.8, 0.5, 3, 0.9, -d2 + 0.35, ahsap); ['#c94f3d', '#4a6fa5', '#4f8a3c'].forEach((c, i) => k(0.8, 0.3, 0.4, 2.1 + i * 0.9, 1.3, -d2 + 0.4, c, { carp: false })); break;
       case 'madenci':   // çuvallar, altın tartısı
-        for (let i = 0; i < 3; i++) k(0.7, 0.8, 0.6, -3 + i * 0.9, 0.4, -d2 + 0.6, '#a08a5a');
-        k(2.6, 1, 0.7, 2.5, 0.5, -d2 + 0.6, ahsap); k(0.4, 0.15, 0.4, 2.5, 1.08, -d2 + 0.6, '#e8c84a', { carp: false }); break;
+        for (let i = 0; i < 3; i++) k(0.7, 0.8, 0.6, -3.6 + i * 0.9, 0.4, -d2 + 0.6, '#a08a5a');
+        k(2.6, 1, 0.7, 2.9, 0.5, -d2 + 0.6, ahsap); k(0.4, 0.15, 0.4, 2.9, 1.08, -d2 + 0.6, '#e8c84a', { carp: false }); break;
       case 'demirci':   // örs, kızgın demir, alet duvarı
         k(0.9, 0.35, 0.4, -2, 0.85, -0.6, metal, { carp: true, taban: 0 }); k(0.4, 0.7, 0.3, -2, 0.35, -0.6, koyu2, { carp: false });
-        k(0.3, 0.06, 0.25, -1.6, 1.06, -0.6, '#ff7a2a', { isik: '#aa3a00', carp: false }); k(4, 1.6, 0.15, 2, 1.6, -d2 + 0.3, koyu2, { carp: false }); break;
-      case 'kilise':   // cami: halılar, mihrap, minber, bağış kutusu
-        for (let i = 0; i < 5; i++) [-1, 1].forEach(sv => k(5.2, 0.04, 1.5, sv * 3.2, 0.02, 4 - i * 2, i % 2 ? '#8a2a2a' : '#a8382e', { carp: false }));   // seccade sıraları
-        k(1.6, 2.6, 0.25, 0, 1.3, -d2 + 0.2, '#3f7a6a', { carp: false }); k(1.1, 2.1, 0.27, 0, 1.15, -d2 + 0.22, '#e8d9a8', { carp: false });   // mihrap
-        k(0.9, 1.6, 2.4, -3.5, 0.8, -d2 + 1.5, ahsap); k(0.95, 0.12, 0.6, -3.5, 2.4, -d2 + 0.7, '#3f7a6a', { carp: false });   // minber
-        k(0.6, 0.6, 0.4, 3, 0.3, -d2 + 2.4, '#8a6a3a'); break;
+        k(0.3, 0.06, 0.25, -1.6, 1.06, -0.6, '#ff7a2a', { isik: '#aa3a00', carp: false }); k(3.6, 1.6, 0.15, 3.3, 1.6, -d2 + 0.3, koyu2, { carp: false }); break;
+      case 'kilise': {   // cami (halı, levhalar, avize, minberin görüntüsü sahne.js'te)
+        const m = minber(b), qu = m.qu;
+        k(0.16, 3.0, 2.0, qu + 0.08, 1.5, 0, '#1f5f7a', { carp: false }); k(0.18, 2.3, 1.3, qu + 0.09, 1.25, 0, '#efe3c0', { carp: false });   // mihrap
+        k(0.19, 1.8, 0.8, qu + 0.1, 1.0, 0, '#cdb98a', { carp: false });
+        // minberin yan korkulukları katı (merdivene sadece önden çıkılır); görüntüsü sahnede
+        [-1, 1].forEach(s => k(m.u2 - m.u0, 2.3, 0.1, (m.u0 + m.u2) / 2, 1.15, m.w + s * (m.yari + 0.07), '#ece4d0', { carp: true, gizli: true, taban: 0 }));
+        // müezzin mahfili (ön sağ köşede, direkler üstünde)
+        [[4.7, 5.7], [7.05, 5.7], [4.7, 8.55], [7.05, 8.55]].forEach(([u, w]) => k(0.25, 2.4, 0.25, u, 1.2, w, '#6a4424', { carp: true }));
+        k(2.7, 0.2, 3.1, 5.9, 2.5, 7.1, '#7a5230', { carp: false });
+        k(2.7, 0.9, 0.08, 5.9, 3.05, 5.58, '#6a4424', { carp: false }); k(0.08, 0.9, 3.1, 4.58, 3.05, 7.1, '#6a4424', { carp: false });
+        k(0.6, 0.6, 0.4, 3, 0.3, -d2 + 2.4, '#8a6a3a'); break;   // bağış kutusu
+      }
       case 'istasyon':   // bilet gişesi ve banklar
         k(4, 1.1, 0.7, 6, 0.55, -1.5, ahsap); [-6, -2].forEach(x => k(3, 0.5, 0.6, x, 0.25, 1.5, ahsap)); break;
       case 'samanlik':   // saman balyaları
-        for (let i = 0; i < 6; i++) k(1.4, 1, 1, -4 + (i % 3) * 1.6, 0.5 + Math.floor(i / 3), -d2 + 1, '#e2c46b');
+        for (let i = 0; i < 6; i++) k(1.4, 1, 1, -5.2 + (i % 3) * 1.6, 0.5 + Math.floor(i / 3), -d2 + 1, '#e2c46b');
         k(1.4, 1, 1, 4.5, 0.5, -d2 + 1, '#e2c46b'); break;
       case 'ahir':   // bölmeler ve atlar
         for (let i = 0; i < 4; i++) {
-          const x = -7 + i * 3.6, at = i % 2 ? '#6a4020' : '#3a2a1a';
+          const x = [-7, -3.8, 3.8, 7][i], at = i % 2 ? '#6a4020' : '#3a2a1a';   // ortadaki arka kapının önü boş
           k(0.15, 1.4, 3, x - 1.6, 0.7, -d2 + 1.7, ahsap, { carp: true });
           k(0.7, 0.9, 1.8, x, 1.1, -d2 + 1.4, at, { carp: true, taban: 0 }); k(0.4, 0.5, 0.7, x, 1.6, -d2 + 2.5, at, { carp: false });
         } break;
       case 'berber':   // ayna, raf, dolap
-        k(2.4, 1.3, 0.08, 2, 1.6, -d2 + 0.25, '#cfe6f0', { carp: false }); k(2.6, 0.12, 0.4, 2, 0.9, -d2 + 0.35, ahsap, { carp: false });
-        for (let i = 0; i < 4; i++) k(0.1, 0.22, 0.1, 1.2 + i * 0.5, 1.07, -d2 + 0.35, ['#4a8ab0', '#c94f3d', '#e8d27a', '#2f6a3a'][i], { carp: false });
+        k(2.4, 1.3, 0.08, 2.8, 1.6, -d2 + 0.25, '#cfe6f0', { carp: false }); k(2.6, 0.12, 0.4, 2.8, 0.9, -d2 + 0.35, ahsap, { carp: false });
+        for (let i = 0; i < 4; i++) k(0.1, 0.22, 0.1, 2.0 + i * 0.5, 1.07, -d2 + 0.35, ['#4a8ab0', '#c94f3d', '#e8d27a', '#2f6a3a'][i], { carp: false });
         k(1.6, 1.1, 0.6, -2.5, 0.55, -d2 + 0.5, ahsap); break;
       case 'doktor':
         k(2, 0.6, 1, -2.5, 0.3, -d2 + 1, beyaz); k(1.6, 1.8, 0.5, 2.5, 0.9, -d2 + 0.35, beyaz);
@@ -287,11 +298,11 @@ const Kasaba = (() => {
 
   // Sundurma direkleri ve banka sütunları (sahne.js ile aynı yerler) katı
   binalar.forEach(b => {
-    if (b.tur === 'kule' || b.tur === 'ambar' || b.tur === 'ev' || Math.abs(b.z) >= 40) return;
+    if (b.tur === 'kule' || b.tur === 'ambar' || b.tur === 'ev' || b.id === 'kilise' || Math.abs(b.z) >= 40) return;
     for (let u = -b.g / 2 + 0.3; u <= b.g / 2; u += Math.max(3, b.g / 4)) { if (Math.abs(u) < 1.6) continue;   // kapının önüne direk yok
       const p = dunya(b, u, b.d / 2 + 2.3); engeller.push({ tur: 'gorunmez', x: p.x, z: p.z, r: 0.17 }); }
   });
-  { const b = binaBul('kilise'), p = dunya(b, b.g / 2 + 0.2, b.d / 2 - 1.2); engeller.push({ tur: 'minare', x: p.x, z: p.z, r: 0.95 }); }   // caminin minaresi katı
+  { const b = binaBul('kilise'), p = dunya(b, b.g / 2 + 1.15, b.d / 2 - 1.2); engeller.push({ tur: 'minare', x: p.x, z: p.z, r: 0.95 }); }   // caminin minaresi katı
   { const b = binaBul('banka'); [-2.2, 2.2].forEach(u => { const p = dunya(b, u, b.d / 2 + 0.3); engeller.push({ tur: 'gorunmez', x: p.x, z: p.z, r: 0.33 }); }); }
   // Şerif bekleme odası: oyun başında şerifler burada kilitli bekler, sonra doğudaki kapı açılır
   const serifOdasi = { x: -61, z: -31, g: 10, d: 7, y: 3.2, kapiG: 2.4 };
@@ -382,6 +393,11 @@ const Kasaba = (() => {
   // Ayağının bastığı yükseklik (merdivende eğimli, üst katta KAT_Y). yOnce: bir önceki yükseklik
   function zeminY(x, z, yOnce = 0) {
     const b = icBina(x, z);
+    if (b && b.id === 'kilise') {   // minber: basamaklardan çıkılır
+      const p = yerel(b, x, z), m = minber(b);
+      if (Math.abs(p.w - m.w) < m.yari && p.u > m.u0 && p.u < m.u2) return p.u < m.u1 ? m.h : m.h * (m.u2 - p.u) / (m.u2 - m.u1);
+      return 0;
+    }
     if (!b || b.ic !== 2) return 0;
     const p = yerel(b, x, z), m = merdiven(b);
     if (p.u < m.u2) {
@@ -396,9 +412,9 @@ const Kasaba = (() => {
     if (!b) return 99;
     if (b.ic === 2 && y < 1.6) {
       const p = yerel(b, x, z), m = merdiven(b);
-      if (!(p.u < m.u2 && p.w > m.wUst)) return KAT_Y - 0.25;
+      if (!(p.u < m.u2 && p.w > m.wUst)) return KAT_Y - 0.5;
     }
-    return duvarY(b) - 0.35;
+    return duvarY(b) - 0.55;
   }
 
   // ---------- Süsler (görsel; büyükleri katı) ----------
@@ -565,7 +581,7 @@ const Kasaba = (() => {
   function odadaYer() { const o = serifOdasi; return { x: o.x - o.g / 2 + 1 + Math.random() * (o.g - 2), z: o.z - o.d / 2 + 1 + Math.random() * (o.d - 2) }; }
 
   return {
-    susler, icerdeBina, oturaklar: gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye'), POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, barmenYeri, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
+    susler, icerdeBina, oturaklar: gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye'), POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, barmenYeri, imamYeri, minber, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
     engelIsin, SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
     it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
   };

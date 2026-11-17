@@ -41,6 +41,48 @@ const Sahne = (() => {
   }
 
   // Tabela yazısı (canvas dokusu)
+  // Yuvarlak hat levhası (yeşil zemin, altın yazı)
+  function levha(yazi) {
+    const c = document.createElement('canvas'); c.width = c.height = 512;
+    const x = c.getContext('2d');
+    x.fillStyle = '#c9a23a'; x.beginPath(); x.arc(256, 256, 252, 0, 7); x.fill();
+    x.fillStyle = '#123f33'; x.beginPath(); x.arc(256, 256, 228, 0, 7); x.fill();
+    x.strokeStyle = '#e8c860'; x.lineWidth = 6; x.beginPath(); x.arc(256, 256, 212, 0, 7); x.stroke();
+    x.fillStyle = '#f2d27a'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+    let fs = 210; x.font = `bold ${fs}px "Amiri", "Traditional Arabic", "Arabic Typesetting", "Noto Naskh Arabic", "Times New Roman", serif`;
+    while (x.measureText(yazi).width > 340 && fs > 60) { fs -= 10; x.font = `bold ${fs}px "Amiri", "Traditional Arabic", "Arabic Typesetting", "Noto Naskh Arabic", "Times New Roman", serif`; }
+    x.fillText(yazi, 256, 270);
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+    return new THREE.MeshBasicMaterial({ map: t, transparent: true });
+  }
+  function yaziBandi(yazi, zemin = '#1f4a6a', renk = '#f2d27a') {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 192;
+    const x = c.getContext('2d');
+    x.fillStyle = '#c9a23a'; x.fillRect(0, 0, 1024, 192); x.fillStyle = zemin; x.fillRect(8, 8, 1008, 176);
+    x.fillStyle = renk; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+    let fs = 120; x.font = `bold ${fs}px "Amiri", "Traditional Arabic", "Arabic Typesetting", "Noto Naskh Arabic", "Times New Roman", serif`;
+    while (x.measureText(yazi).width > 960 && fs > 40) { fs -= 6; x.font = `bold ${fs}px "Amiri", "Traditional Arabic", "Arabic Typesetting", "Noto Naskh Arabic", "Times New Roman", serif`; }
+    x.fillText(yazi, 512, 100);
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+    return new THREE.MeshBasicMaterial({ map: t });
+  }
+  // Cami halısı: kıbleye dönük saf saf seccade deseni (u = x ekseni, kıble -u)
+  function haliDokusu(G, D) {
+    const c = document.createElement('canvas'), P = 64; c.width = Math.round(G * P); c.height = Math.round(D * P);
+    const x = c.getContext('2d');
+    x.fillStyle = '#8f1d22'; x.fillRect(0, 0, c.width, c.height);
+    const saf = 1.15 * P, sec = 0.8 * P;
+    for (let sx = 0; sx < c.width; sx += saf) {
+      for (let sy = 0; sy < c.height; sy += sec) {
+        x.fillStyle = '#a8282c'; x.fillRect(sx + 6, sy + 4, saf - 12, sec - 8);
+        x.fillStyle = '#7a1418'; x.beginPath(); x.moveTo(sx + 10, sy + sec / 2); x.lineTo(sx + 28, sy + 8); x.lineTo(sx + 28, sy + sec - 8); x.closePath(); x.fill();   // sivri mihrap ucu kıbleye
+        x.strokeStyle = '#d8b25a'; x.lineWidth = 2; x.strokeRect(sx + 6, sy + 4, saf - 12, sec - 8);
+      }
+      x.fillStyle = '#d8b25a'; x.fillRect(sx, 0, 3, c.height);   // saf çizgisi
+    }
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 8;
+    return new THREE.MeshLambertMaterial({ map: t });
+  }
   function tabela(yazi, renk = '#f5e6c4', zemin = '#3b2414') {
     const c = document.createElement('canvas'); c.width = 512; c.height = 128;
     const x = c.getContext('2d');
@@ -106,7 +148,15 @@ const Sahne = (() => {
       const hilal = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.07, 6, 16, Math.PI * 1.4), mat('#e8c84a')); hilal.position.set(x, yy + 1.25, z); hilal.rotation.z = Math.PI * 0.8; grup.add(hilal);
     }
     if (b.id === 'kilise') {
-      const mx = g / 2 + 0.2, mz = d / 2 - 1.2, beyaz = mat('#f2efe6'), boyM = H + 13;
+      const mx = g / 2 + 1.15, mz = d / 2 - 1.2, beyaz = mat('#f2efe6'), boyM = H + 13;
+      kutuEkle(1.5, 0.6, 1.5, mx, 0.3, mz, mat('#cfc8b6'));   // minare kaidesi
+      // Taç kapı: taş çerçeve, sivri kemer, çini pano ve kelime-i tevhid
+      const on2 = d / 2 + Kasaba.DUVAR / 2, tas = mat('#e6dcc6'), cini = mat('#2a6f8f');
+      [-1, 1].forEach(s => kutuEkle(0.9, 5, 0.3, s * 1.55, 2.5, on2 + 0.15, tas));
+      kutuEkle(4.0, 2.4, 0.3, 0, 3.8, on2 + 0.15, tas);
+      const kemer = new THREE.Mesh(new THREE.CircleGeometry(1.1, 24, 0, Math.PI), cini); kemer.position.set(0, 2.6, on2 + 0.31); grup.add(kemer);
+      const kemerK = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.08, 6, 24, Math.PI), mat('#c9a23a')); kemerK.position.set(0, 2.6, on2 + 0.32); grup.add(kemerK);
+      const pano = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.6), yaziBandi('لا إله إلا الله محمد رسول الله', '#2a6f8f')); pano.position.set(0, 4.45, on2 + 0.31); grup.add(pano);
       const govdeM = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.95, boyM, 12), beyaz); govdeM.position.set(mx, boyM / 2, mz); grup.add(govdeM);
       const serefe = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.1, 0.35, 14), mat('#cfc8b6')); serefe.position.set(mx, boyM * 0.78, mz); grup.add(serefe);
       const kulah = new THREE.Mesh(new THREE.ConeGeometry(0.85, 2.6, 12), mat('#6f8f9a')); kulah.position.set(mx, boyM + 1.3, mz); grup.add(kulah);
@@ -116,14 +166,21 @@ const Sahne = (() => {
     const kapiG = b.tur === 'ambar' || b.ic ? 0 : 1.8;
     if (kapiG) { kutuEkle(kapiG + 0.3, 2.7, 0.12, 0, 1.35, d / 2 + 0.03, cerceve); kutuEkle(kapiG, 2.5, 0.14, 0, 1.25, d / 2 + 0.05, mat('#5a3420')); }
     const on = b.ic ? d / 2 + Kasaba.DUVAR / 2 : d / 2;
-    const pencere = (x, yy) => { kutuEkle(1.5, 1.4, 0.1, x, yy, on + 0.03, cerceve); kutuEkle(1.25, 1.15, 0.12, x, yy, on + 0.05, cam); };
+    const pencere = (x, yy) => {
+      kutuEkle(1.5, 1.4, 0.1, x, yy, on + 0.03, cerceve); kutuEkle(1.25, 1.15, 0.12, x, yy, on + 0.05, cam);
+      if (b.ic) { const ic = d / 2 - Kasaba.DUVAR / 2; kutuEkle(1.5, 1.4, 0.06, x, yy, ic - 0.02, cerceve); kutuEkle(1.25, 1.15, 0.08, x, yy, ic - 0.03, cam); }   // içeriden de pencere
+      if (b.id === 'kilise') {   // kemerli pencere üstü
+        const k1 = new THREE.Mesh(new THREE.CircleGeometry(0.75, 16, 0, Math.PI), cerceve); k1.position.set(x, yy + 0.7, on + 0.085); grup.add(k1);
+        const k2 = new THREE.Mesh(new THREE.CircleGeometry(0.62, 16, 0, Math.PI), cam); k2.position.set(x, yy + 0.58, on + 0.115); grup.add(k2);
+      }
+    };
     if (b.tur !== 'ambar') {
       const adim = 3.6, n = Math.floor((g - 4) / adim / 2);
       for (let i = 1; i <= n; i++) { pencere(i * adim, 1.7); pencere(-i * adim, 1.7); }
       const ust = b.ic === 2 ? Kasaba.KAT_Y + 1.7 : y * 0.6;
       if (y >= 8) for (let i = -n; i <= n; i++) if (i) pencere(i * adim, ust); else pencere(0, ust);
       // Saçak ve direkler
-      if (Math.abs(b.z) < 40 && b.tur !== 'ev') {
+      if (Math.abs(b.z) < 40 && b.tur !== 'ev' && b.id !== 'kilise') {
         kutuEkle(g, 0.15, 2.4, 0, 3.2, d / 2 + 1.2, cati);
         for (let x = -g / 2 + 0.3; x <= g / 2; x += Math.max(3, g / 4)) if (Math.abs(x) >= 1.6) kutuEkle(0.18, 3.2, 0.18, x, 1.6, d / 2 + 2.3, cerceve);
       }
@@ -131,7 +188,7 @@ const Sahne = (() => {
     // Tabela
     if (b.tur !== 'ev') {
       const tw = Math.min(g * 0.8, 9), ty = b.tur === 'ambar' ? y * 0.84 : y * 0.86;
-      const t = new THREE.Mesh(new THREE.PlaneGeometry(tw, tw / 4), tabela(b.ad.toLocaleUpperCase('tr')));
+      const t = new THREE.Mesh(new THREE.PlaneGeometry(tw, tw / 4), b.id === 'kilise' ? tabela('CAMİ', '#f2d27a', '#1f4a6a') : tabela(b.ad.toLocaleUpperCase('tr')));
       t.position.set(0, ty, d / 2 + 0.03 + (b.tur === 'ambar' ? 0.2 : 0)); grup.add(t);
     }
     // Özel süsler
@@ -180,8 +237,49 @@ const Sahne = (() => {
       // İç tavan lambası
       kutuEkle(0.4, 0.4, 0.4, 2, KY - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
       kutuEkle(0.4, 0.4, 0.4, 2, H - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
-    } else kutuEkle(0.4, 0.4, 0.4, 0, H - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
+    } else if (b.id !== 'kilise') kutuEkle(0.4, 0.4, 0.4, 0, H - 0.5, 0, mat('#ffd27a', { emissive: '#aa7a20' }));
     esyalar(b, kutuEkle);
+    if (b.id === 'kilise') camiIci(b, kutuEkle);
+  }
+  // Caminin içi: halı, hat levhaları, mihrap kemeri, minber, avize
+  function camiIci(b, kutuEkle) {
+    const grup = kutuEkle(0.01, 0.01, 0.01, 0, -1, 0, mat('#000')).parent;
+    const K = Kasaba.DUVAR, g2 = b.g / 2, d2 = b.d / 2, H = Kasaba.duvarY(b), m = Kasaba.minber(b), qu = m.qu;
+    const ekle = (geo, mt, x, y, z) => { const o = new THREE.Mesh(geo, mt); o.position.set(x, y, z); grup.add(o); return o; };
+    // Halı (bütün zemin)
+    const G = b.g - K - 0.1, D = b.d - K - 0.1;
+    const hali = ekle(new THREE.PlaneGeometry(G, D), haliDokusu(G, D), 0, 0.085, 0); hali.rotation.x = -Math.PI / 2;
+    // Mihrap kemeri ve üstünde besmele
+    const yanP = (geo, mt, x, y, z, ry) => { const o = ekle(geo, mt, x, y, z); o.rotation.y = ry; return o; };
+    yanP(new THREE.CircleGeometry(0.65, 20, 0, Math.PI), mat('#efe3c0'), qu + 0.19, 2.4, 0, Math.PI / 2);
+    yanP(new THREE.TorusGeometry(0.72, 0.06, 6, 20, Math.PI), mat('#c9a23a'), qu + 0.2, 2.4, 0, Math.PI / 2);
+    yanP(new THREE.PlaneGeometry(3.4, 0.64), yaziBandi('بسم الله الرحمن الرحيم'), qu + 0.03, 3.55, 0, Math.PI / 2);
+    // Hat levhaları: Allah ve Muhammed (kıble duvarı ve karşı duvar)
+    const lv = (yazi, x, y, z, ry, r = 0.95) => yanP(new THREE.CircleGeometry(r, 40), levha(yazi), x, y, z, ry);
+    lv('الله', qu + 0.03, 4.6, 5.2, Math.PI / 2); lv('محمد', qu + 0.03, 4.6, -5.4, Math.PI / 2);
+    lv('الله', g2 - K / 2 - 0.03, 4.4, -3, -Math.PI / 2); lv('محمد', g2 - K / 2 - 0.03, 4.4, 3, -Math.PI / 2);
+    lv('الله', -4.4, 4.4, -d2 + K / 2 + 0.03, 0, 0.8); lv('محمد', 4.4, 4.4, -d2 + K / 2 + 0.03, 0, 0.8);
+    // Minber: basamaklar, üst sahanlık, yan korkuluklar, külahlı köşk, giriş kapısı
+    const mermer = mat('#ece4d0'), kirmizi = mat('#9a2a2a'), altin = mat('#c9a23a'), L = m.u2 - m.u1, n = 7;
+    for (let i = 0; i < n; i++) { const h = m.h * (i + 1) / n; ekle(new THREE.BoxGeometry(L / n + 0.01, h, m.yari * 2), i % 2 ? kirmizi : mat('#8a2026'), m.u2 - (i + 0.5) * L / n, h / 2, m.w); }
+    ekle(new THREE.BoxGeometry(m.u1 - m.u0, m.h, m.yari * 2), kirmizi, (m.u0 + m.u1) / 2, m.h / 2, m.w);
+    const sekil = new THREE.Shape(); sekil.moveTo(m.u2, 0); sekil.lineTo(m.u2, 0.95); sekil.lineTo(m.u1, m.h + 0.95); sekil.lineTo(m.u0, m.h + 0.95); sekil.lineTo(m.u0, 0); sekil.closePath();
+    const yanGeo = new THREE.ExtrudeGeometry(sekil, { depth: 0.08, bevelEnabled: false });
+    [-1, 1].forEach(s => { ekle(yanGeo, mermer, 0, 0, m.w + s * (m.yari + 0.04) - 0.04); });
+    [-1, 1].forEach(s => { const r = ekle(new THREE.BoxGeometry(Math.hypot(L, m.h), 0.05, 0.1), altin, (m.u1 + m.u2) / 2, m.h / 2 + 0.97, m.w + s * (m.yari + 0.04)); r.rotation.z = -Math.atan2(m.h, L); });
+    [[m.u0 + 0.08, -1], [m.u0 + 0.08, 1], [m.u1 - 0.05, -1], [m.u1 - 0.05, 1]].forEach(([u, s]) => ekle(new THREE.CylinderGeometry(0.05, 0.05, 2.1, 8), mermer, u, m.h + 1.05, m.w + s * (m.yari - 0.02)));
+    ekle(new THREE.BoxGeometry(m.u1 - m.u0 + 0.2, 0.12, m.yari * 2 + 0.2), mermer, (m.u0 + m.u1) / 2, m.h + 2.15, m.w);
+    const kulah = ekle(new THREE.ConeGeometry(0.72, 1.4, 8), mat('#6f8f9a'), (m.u0 + m.u1) / 2, m.h + 2.9, m.w); kulah.rotation.y = Math.PI / 8;
+    ekle(new THREE.BoxGeometry(0.05, 0.4, 0.05), altin, (m.u0 + m.u1) / 2, m.h + 3.8, m.w);
+    [-1, 1].forEach(s => ekle(new THREE.BoxGeometry(0.16, 2.5, 0.16), mermer, m.u2 + 0.05, 1.25, m.w + s * (m.yari + 0.06)));
+    yanP(new THREE.TorusGeometry(m.yari + 0.06, 0.07, 6, 16, Math.PI), altin, m.u2 + 0.05, 2.5, m.w, Math.PI / 2);
+    // Avize: büyük halka, kandiller, zincirler
+    const ay = H - 2.6, avize = new THREE.Group(); avize.position.set(0.5, ay, 0); grup.add(avize);
+    const halka = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.05, 6, 40), altin); halka.rotation.x = Math.PI / 2; avize.add(halka);
+    const kandil = mat('#ffe7a8', { emissive: '#d89a30' });
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; const k = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), kandil); k.position.set(Math.cos(a) * 2.4, -0.1, Math.sin(a) * 2.4); avize.add(k); }
+    [0, 1, 2, 3].forEach(i => { const a = i / 4 * Math.PI * 2 + 0.4, z = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.6, 4), altin); z.position.set(Math.cos(a) * 1.2, 1.3, Math.sin(a) * 1.2); z.rotation.z = Math.cos(a) * 0.43; z.rotation.x = -Math.sin(a) * 0.43; avize.add(z); });
+    const isik = new THREE.PointLight('#ffd8a0', 0.8, 18); isik.position.set(0.5, ay - 0.3, 0); grup.add(isik);
   }
   // Bina içi eşyalar: liste kasaba.js'te (aynı liste çarpışma için de kullanılır)
   function esyalar(b, k) {
@@ -356,7 +454,7 @@ const Sahne = (() => {
   function kapiCanlandir(dt) { if (kapiGrup) kapiGrup.rotation.y += (kapiHedef - kapiGrup.rotation.y) * Math.min(1, dt * 3); }
 
   // ---------- Görev eşyaları: sandalyeler, berber koltuğu ve ustası, berber direği ----------
-  let usta = null, barmen = null;
+  let usta = null, barmen = null, imam = null;
   function gorevEsyalari() {
     Kasaba.gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye').forEach(g => {
       const berber = g.anim === 'otur';
@@ -372,6 +470,7 @@ const Sahne = (() => {
     const u = Kasaba.berberUsta;
     usta = Karakter.yap(1); usta.position.set(u.x, 0, u.z); usta.rotation.y = u.yon; scene.add(usta);
     const bm = Kasaba.barmenYeri; barmen = Karakter.yap(1); barmen.position.set(bm.x, 0, bm.z); barmen.rotation.y = bm.yon; scene.add(barmen);
+    const im = Kasaba.imamYeri; imam = Karakter.yap(4); imam.position.set(im.x, im.y, im.z); imam.rotation.y = im.yon; scene.add(imam);   // minberdeki imam
     // Dükkânın önünde kırmızı-beyaz berber direği
     const b = Kasaba.binaBul('berber'), d = Kasaba.dunya(b, 2.6, b.d / 2 + 0.5);
     const direk = new THREE.Group(); direk.position.set(d.x, 0, d.z); scene.add(direk);
@@ -513,7 +612,7 @@ const Sahne = (() => {
     const afisGeo = new THREE.PlaneGeometry(0.62, 0.8);
     let sira = 0;
     Kasaba.binalar.forEach(b => {
-      if (b.tur === 'kule' || b.tur === 'ambar') return;
+      if (b.tur === 'kule' || b.tur === 'ambar' || b.id === 'kilise') return;   // caminin duvarına afiş asılmaz
       const on = b.ic ? b.d / 2 + Kasaba.DUVAR / 2 + 0.03 : b.d / 2 + 0.03;
       const yerler = b.tur === 'ev' ? [1.9] : [2.15, -2.15];
       yerler.forEach((u, i) => {
@@ -563,5 +662,5 @@ const Sahne = (() => {
     if (degirmenPervane) degirmenPervane.rotation.z += dt * 1.2;
   }
 
-  return { susAnim, get berberUstasi() { return usta; }, get barmen() { return barmen; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
+  return { susAnim, get berberUstasi() { return usta; }, get barmen() { return barmen; }, get imam() { return imam; }, postaSayisi, kur, haritaZemini, serifKapisi(acik, hemen) { kapiHedef = acik ? 1.6 : 0; if (hemen && kapiGrup) kapiGrup.rotation.y = kapiHedef; }, kapiCanlandir, get scene() { return scene; }, get kamera() { return kamera; }, ciz() { renderer.render(scene, kamera); }, mobil };
 })();

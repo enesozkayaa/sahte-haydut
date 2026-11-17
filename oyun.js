@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 37;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 38;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -300,6 +300,7 @@
     isaretler.forEach(s => Sahne.scene?.remove(s)); isaretler.length = 0;
     lazerler.forEach(l => Sahne.scene?.remove(l.cizgi, l.nokta)); lazerler.clear();
     tozlar.forEach(p => Sahne.scene?.remove(p)); tozlar.length = 0;
+    if (tilavet) tilavet.pause();   // oyun bitince tilavet susar
     durbunAyarla(false);
     $('serifPanel').innerHTML = ''; $('bekleYazi').classList.add('gizli');
     oyun = null;
@@ -657,6 +658,28 @@
     if (oyun.h === oturan && Math.hypot(oyun.x - trasGorevi.x, oyun.z - trasGorevi.z) < 1.3) var_ = true;
     Karakter.canlandir(u, var_ ? Kasaba.animKodu('tras') : 0, dt);
     if (Sahne.barmen) Karakter.canlandir(Sahne.barmen, Kasaba.animKodu('calis'), dt * 0.6);   // barmen bardak siler
+    if (Sahne.imam) Karakter.canlandir(Sahne.imam, (performance.now() / 1000) % 14 < 8 ? Kasaba.animKodu('dua') : 0, dt * 0.5);   // imam minberde dua eder
+    tilavetGuncelle();
+  }
+  // Camide Kur'an tilaveti: içerideyken duyulur, yanından geçerken kısık (oyun sesi kapalıysa çalmaz)
+  const TILAVET = [1, 112, 113, 114, 108, 103, 109, 110].map(n => `https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/${n}.mp3`);
+  let tilavet = null, tilavetSira = 0, sonTilavet = 0;
+  function tilavetGuncelle() {
+    const t = performance.now(); if (t - sonTilavet < 200) return; sonTilavet = t;
+    const b = Kasaba.binaBul('kilise'); if (!b) return;
+    const px = oyun && oyun.canli ? oyun.x : Sahne.kamera.position.x, pz = oyun && oyun.canli ? oyun.z : Sahne.kamera.position.z;
+    const p = Kasaba.yerel(b, px, pz), dis = Math.max(0, Math.abs(p.u) - b.g / 2, Math.abs(p.w) - b.d / 2);
+    let hedef = Kasaba.icBina(px, pz) === b ? 0.6 : Math.max(0, 0.22 * (1 - dis / 14));
+    if (!Ses.acik || !oyun) hedef = 0;
+    if (hedef > 0 && !tilavet) {
+      tilavet = new Audio(TILAVET[tilavetSira]); tilavet.volume = 0;
+      tilavet.onended = () => { tilavetSira = (tilavetSira + 1) % TILAVET.length; tilavet.src = TILAVET[tilavetSira]; tilavet.play().catch(() => {}); };
+      tilavet.onerror = () => { tilavetSira = (tilavetSira + 1) % TILAVET.length; };
+    }
+    if (!tilavet) return;
+    tilavet.volume = Math.max(0, Math.min(1, tilavet.volume + (hedef - tilavet.volume) * 0.35));
+    if (hedef > 0 && tilavet.paused) tilavet.play().catch(() => {});
+    else if (hedef === 0 && tilavet.volume < 0.02 && !tilavet.paused) tilavet.pause();
   }
   function lazerleriGuncelle() {
     const gorulen = new Set();

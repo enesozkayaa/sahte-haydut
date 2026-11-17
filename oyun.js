@@ -80,6 +80,8 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
+  const SURUM = 28;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
   const ekId = k => 'ek' + k[0].toUpperCase() + k.slice(1);
@@ -91,7 +93,7 @@
   function ayarYay(listedenGeldi) {
     if (!Ag.evMi) return;
     const a = ayarOku(), degisti = a.rolMod !== lobiAyar.rolMod; lobiAyar = a;
-    $('ayarOzet').textContent = ayarYazi(a); Ag.yayinla({ tip: 'ayar', ayar: a });
+    $('ayarOzet').textContent = ayarYazi(a); Ag.yayinla({ tip: 'ayar', ayar: a, surum: SURUM });
     if (degisti && !listedenGeldi) lobiListesi(Ag.oyuncular); else rolDugmeleri();
   }
 
@@ -163,7 +165,8 @@
   Ag.on('mesaj', mesaj);
   function mesaj(m) {
     switch (m.tip) {
-      case 'ayar': if (!Ag.evMi) { const degisti = m.ayar.rolMod !== lobiAyar.rolMod; $('ayarOzet').textContent = ayarYazi(m.ayar); lobiAyar = m.ayar; if (degisti) lobiListesi(Ag.oyuncular); else rolDugmeleri(); } break;
+      case 'ayar': if (!Ag.evMi && m.surum !== SURUM) $('lobiDurum').innerHTML = `⚠️ <b>Sürümün farklı!</b> Oda sahibi: ${m.surum ?? 'eski'}, sen: ${SURUM}. Daha eski olan sayfayı yenilesin (gerekirse kapatıp aç).`;
+        if (!Ag.evMi) { const degisti = m.ayar.rolMod !== lobiAyar.rolMod; $('ayarOzet').textContent = ayarYazi(m.ayar); lobiAyar = m.ayar; if (degisti) lobiListesi(Ag.oyuncular); else rolDugmeleri(); } break;
       case 'basla': oyunBaslat(m); break;
       case 'd': if (oyun) konumlar(m); break;
       case 'is': if (oyun) isDurumu(m); break;
@@ -183,7 +186,7 @@
       case 'cinayet': if (oyun) {
         oyun.oldurulen = m.oldurulen; hudGuncelle();
         if (oyun.rol === 'serif') {
-          if (m.x !== undefined) oyun.darbe.push({ x: m.x, z: m.z, bas: performance.now(), sure: 6000 });   // ceset haritada yanar
+          if (m.x !== undefined) { oyun.darbe.push({ x: m.x, z: m.z, bas: performance.now(), sure: 8000, ceset: true }); oyun.cesetler.push({ x: m.x, z: m.z }); }   // ceset haritada yanar, kurukafa kalır
           toast(`🔪 Bir kasabalı bıçaklandı!<br><small>${m.x !== undefined ? 'Yeri haritanda kırmızı yanıyor!' : 'Cesedi yerde yatıyor, etrafa bak'}</small>`, 2600); akisEkle(`🔪 Bir kasabalı bıçaklandı (${m.oldurulen}/${m.gerek})`, 'kotu'); Ses.kotu();
         }
         else { akisEkle(`🔪 Hedef bıçaklandı (${m.oldurulen}/${m.gerek})${m.kim ? ' – ' + m.kim : ''}`, 'takim'); Ses.gorev(); }
@@ -236,7 +239,7 @@
       // (şerif: sadece posta kutusuna bakınca; haydut: sadece 1 kerelik 'kalanları göster' ile)
       aktif: new Set(m.gorevler || Kasaba.gorevler.map(g => g.id)), postaN: 0, aranma: 0, kilikYerleri: new Set(m.kiliklar || []),   // bu oyunun görevleri (görev hedefi kadar)
       gorevSayi: 0, yapilan: new Set(), gorunen: new Set(), hedefler: new Set(), oldurulen: 0, oldurGerek: m.ayar.oldur || 0, bicakBitis: 0, bicakHedef: null, kalanHakki: 1, kalan: m.sure, sonGonder: 0, sonAtes: 0, darbe: [],
-      ek: m.ayar.ek || {}, kanli: new Map(), kopek: m.ayar.ek?.kopek ? 2 : 0, donmaBitis: 0, arananBitis: 0, durbun: false, fov: 70,
+      ek: m.ayar.ek || {}, kanli: new Map(), cesetler: [], kopek: m.ayar.ek?.kopek ? 2 : 0, donmaBitis: 0, arananBitis: 0, durbun: false, fov: 70,
     };
     if (oyun.rol === 'serif') {   // seçilen yardımcıları şerife anlat
       const l = [oyun.ek.arama && '🔎 Yanına yanaşıp E: üstünü ara', oyun.ek.durbun && '🔭 Z: dürbün', oyun.ek.kopek && '🐕 B: köpeği koklat (2 kez)', oyun.ek.kan && '🩸 Kanlı eller bıçaklayanı ele verir', oyun.ek.ceset && '🗺️ Ceset haritada yanar', oyun.ek.tanik && '👉 Tanıklar katili parmakla gösterir', oyun.ek.toz && '💨 Koşanlar toz kaldırır', oyun.ek.posta && '📬 Posta daha hızlı'].filter(Boolean);
@@ -829,8 +832,18 @@
 
   // ---------- Kanlı el süresi ve toz bulutu ----------
   const tozlar = [], tozGeo = new THREE.SphereGeometry(0.28, 7, 5);
+  const damlaGeo = new THREE.SphereGeometry(0.05, 6, 4), damlaMat = new THREE.MeshBasicMaterial({ color: '#c00808' });
   function kanVeToz(dt, t) {
-    oyun.kanli.forEach((bitis, no) => { if (t > bitis) { oyun.kanli.delete(no); const v = varliklar.get(no); if (v) Karakter.kanEkle(v.g, false); } });
+    oyun.kanli.forEach((bitis, no) => {
+      const v = varliklar.get(no);
+      if (t > bitis) { oyun.kanli.delete(no); if (v) Karakter.kanEkle(v.g, false); return; }
+      if (!v || v.durum !== 0 || (no === oyun.benimNo && oyun.kamera === 'goz')) return;
+      if (v.g.visible && !v.g.userData.kan) Karakter.kanEkle(v.g, true);   // yeniden kurulduysa
+      v.damlaT = (v.damlaT || 0) + dt; if (v.damlaT < 0.35) return; v.damlaT = 0;   // elinden kan damlar
+      const m = new THREE.Mesh(damlaGeo, damlaMat); const s = Math.random() < 0.5 ? 1 : -1;
+      m.position.set(v.x + Math.cos(v.yaw) * 0.33 * s, v.y + 0.95, v.z - Math.sin(v.yaw) * 0.33 * s);
+      m.userData = { damla: true, yas: 0, vy: 0 }; Sahne.scene.add(m); tozlar.push(m);
+    });
     if (oyun.ek.toz) {
       const kx = Sahne.kamera.position.x, kz = Sahne.kamera.position.z;
       varliklar.forEach((v, no) => {
@@ -838,14 +851,19 @@
         const kosuyor = ben ? oyun.canli && oyun.h === 2 : v.h === 2 && v.durum === 0;
         if (!kosuyor || Math.hypot(v.x - kx, v.z - kz) > 60 || v.y > 0.3) { v.tozT = 0; return; }   // içeride üst katta toz yok
         v.tozT = (v.tozT || 0) + dt; if (v.tozT < 0.09 || tozlar.length > 140) return; v.tozT = 0;
-        const m = new THREE.Mesh(tozGeo, new THREE.MeshLambertMaterial({ color: '#c9a77a', transparent: true, opacity: 0.55, depthWrite: false }));
+        const m = new THREE.Mesh(tozGeo, new THREE.MeshLambertMaterial({ color: '#b8925e', transparent: true, opacity: 0.75, depthWrite: false }));
         m.position.set(v.x + (Math.random() - 0.5) * 0.4 - Math.sin(v.yaw) * 0.3, 0.2, v.z + (Math.random() - 0.5) * 0.4 - Math.cos(v.yaw) * 0.3);
         m.userData = { yas: 0, vy: 0.35 + Math.random() * 0.3 }; Sahne.scene.add(m); tozlar.push(m);
       });
     }
     for (let i = tozlar.length - 1; i >= 0; i--) {
       const m = tozlar[i], u = m.userData; u.yas += dt;
-      m.position.y += u.vy * dt; m.scale.setScalar(1 + u.yas * 2.2); m.material.opacity = 0.55 * Math.max(0, 1 - u.yas / 1.3);
+      if (u.damla) {   // düşen kan damlası, yerde 4 sn leke olarak kalır
+        if (!u.yerde) { u.vy -= 9.8 * dt; m.position.y += u.vy * dt; const zy = Kasaba.zeminY(m.position.x, m.position.z, m.position.y); if (m.position.y <= zy + 0.02) { u.yerde = true; m.position.y = zy + 0.02; m.scale.set(2.2, 0.15, 2.2); } }
+        if (u.yas > 4.5) { Sahne.scene.remove(m); tozlar.splice(i, 1); }
+        continue;
+      }
+      m.position.y += u.vy * dt; m.scale.setScalar(1 + u.yas * 2.2); m.material.opacity = 0.75 * Math.max(0, 1 - u.yas / 1.3);
       if (u.yas > 1.3) { Sahne.scene.remove(m); m.material.dispose(); tozlar.splice(i, 1); }
     }
   }
@@ -880,6 +898,17 @@
     const t = performance.now();
     oyun.darbe = oyun.darbe.filter(d => t - d.bas < (d.sure || 9000));
     oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(PX(d.x), PZ(d.z), (5 + k * 22) * olcek, 0, 7); x.strokeStyle = `rgba(255,60,40,${1 - k})`; x.lineWidth = 3; x.stroke(); nokta(d.x, d.z, 4, '#ff3a2a'); });
+    // Cesetler (şerif): oyun boyunca 💀; görünen alanın dışındaysa kenarda yönünü gösteren kırmızı ok
+    x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    oyun.cesetler.forEach(c => x.fillText('💀', PX(c.x), PZ(c.z)));
+    oyun.darbe.filter(d => d.ceset).forEach(d => {
+      const px = PX(d.x), pz = PZ(d.z), p = 14 * olcek;
+      if (px >= p && px <= N - p && pz >= p && pz <= N - p) return;
+      const a = Math.atan2(pz - N / 2, px - N / 2), kx = Math.max(p, Math.min(N - p, px)), kz = Math.max(p, Math.min(N - p, pz));
+      x.save(); x.translate(kx, kz); x.rotate(a); x.scale(olcek, olcek);
+      x.beginPath(); x.moveTo(12, 0); x.lineTo(-7, -8); x.lineTo(-7, 8); x.closePath();
+      x.fillStyle = (t / 250) % 2 < 1 ? '#ff2a1a' : '#ffffff'; x.fill(); x.strokeStyle = '#000'; x.lineWidth = 2; x.stroke(); x.restore();
+    });
     varliklar.forEach((v, no) => {
       if (no === oyun.benimNo || v.durum !== 0) return;
       if (oyun.serifler.has(no)) nokta(v.x, v.z, 4.5, SERIF_RENK);
@@ -1074,7 +1103,7 @@
     } else {
       const nisanda = oyun.nisan && oyun.canli;
       oyun.nisanUst = (oyun.nisanUst || 0) + ((nisanda ? 1 : 0) - (oyun.nisanUst || 0)) * 0.18;   // yumuşak geçiş
-      const yuk = oyun.canli ? 1.75 + 1.1 * oyun.nisanUst : 2.6, uzak = oyun.canli ? 3.6 : 5;
+      const yuk = oyun.canli ? 2.85 : 2.6, uzak = oyun.canli ? 3.6 : 5;   // kamera hep biraz yukarıdan bakar
       // Omuz kayması: sağdaki duvara girmesin
       const kat = Kasaba.katOf(oyun.y), PAY = 0.28;   // kamera duvara en az bu kadar yaklaşır (yoksa duvarın içi görünür)
       let sag = 0.55;
@@ -1095,14 +1124,16 @@
       const so = Kasaba.serifOdasi;
       if (oyun.canli && Math.abs(oyun.x - so.x) < so.g / 2 && Math.abs(oyun.z - so.z) < so.d / 2) k.position.y = Math.min(k.position.y, so.y - 0.3);
     }
-    if (oyun.kamera !== 'goz' && oyun.canli && !oyun.kameraYakin && oyun.nisanUst > 0.01 && v) {
-      // Üstten nişan: kamera yukarıda, lazerin ilerideki bir noktasına bakar (lazer düz kalır)
-      oyun.nisanMes = oyun.nisanMes ?? 15;
-      oyun.nisanMes += (Math.max(8, Math.min(35, oyun.lazerT ?? 15)) - oyun.nisanMes) * 0.1;
-      const { o } = silahIsini(v, oyun.yaw, oyun.pitch);
-      const duz = new THREE.Vector3(k.position.x + d.x * 20, k.position.y + d.y * 20, k.position.z + d.z * 20);
-      const hed = o.addScaledVector(d, oyun.nisanMes);
-      k.lookAt(duz.lerp(hed, oyun.nisanUst));
+    if (oyun.kamera !== 'goz' && oyun.canli && !oyun.kameraYakin && v) {
+      // Kamera yukarıda; karakterin baş hizasından ileriye (15 m) bakar. Nişanda lazerin ilerideki bir noktasına bakar (lazer düz kalır)
+      const duz = new THREE.Vector3(oyun.x + d.x * 15, oyun.y + 1.5 * boy + d.y * 15, oyun.z + d.z * 15);
+      if (oyun.nisanUst > 0.01) {
+        oyun.nisanMes = oyun.nisanMes ?? 15;
+        oyun.nisanMes += (Math.max(8, Math.min(35, oyun.lazerT ?? 15)) - oyun.nisanMes) * 0.1;
+        const { o } = silahIsini(v, oyun.yaw, oyun.pitch);
+        duz.lerp(o.addScaledVector(d, oyun.nisanMes), oyun.nisanUst);
+      }
+      k.lookAt(duz);
       return;
     }
     k.lookAt(k.position.x + d.x, k.position.y + d.y, k.position.z + d.z);

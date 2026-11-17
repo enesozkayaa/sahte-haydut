@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 39;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 40;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -836,7 +836,8 @@
       ? `<li class="not">📬 Yapılanları görmek için posta kutusuna git (E)</li>`
       : `<li class="not">✅ Sen ya da takım arkadaşın bir görevi yapınca anında silinir</li>`;
     const bicakSatir = oyun.oldurGerek ? `<li class="${oyun.oldurulen >= oyun.oldurGerek ? 'yapildi' : ''} agir">🔪 ${oyun.rol === 'haydut' ? 'Kırmızı çerçeveli kişileri bıçakla' : 'Bıçaklanan kasabalı'}: ${oyun.oldurulen}/${oyun.oldurGerek}</li>` : '';
-    $('gorevListe').innerHTML = ust + bicakSatir + Kasaba.gorevler.filter(g => oyun.aktif.has(g.id)).map(g => `<li class="${oyun.gorunen.has(g.id) ? 'yapildi' : ''} ${g.agir ? 'agir' : ''}">${g.agir ? '🔴' : '🟡'} ${g.emoji} ${kacis(g.ad)}</li>`).join('');
+    $('gorevListe').innerHTML = ust + bicakSatir + gorevNumaralari().map((g, i) => `<li class="${oyun.gorunen.has(g.id) ? 'yapildi' : ''} ${g.agir ? 'agir' : ''} gorevSatir" data-gid="${g.id}"><b class="no">${i + 1}</b> ${g.emoji} ${kacis(g.ad)}${g.kat ? ' ⬆' : ''}</li>`).join('');
+    $('gorevListe').querySelectorAll('.gorevSatir').forEach(li => li.onclick = () => goreviGoster(li.dataset.gid));
     const kb = $('kalanBtn'); if (kb) kb.onclick = kalanlariGoster;
   }
   // Haydut: 1 kerelik — o ana kadar yapılmış görevlerin üstü çizilir
@@ -901,6 +902,33 @@
   let haritaZemin = null, sonHarita = 0;
   // Küçükken senin etrafını yakından (YAKIN metre yarıçap), büyükken bütün kasabayı gösterir
   const YAKIN = 34;
+  // Görev yerleri: kendi işareti + numarası (listedeki numarayla aynı); büyük haritada adı da yazar
+  function gorevNumaralari() { return Kasaba.gorevler.filter(g => oyun.aktif.has(g.id)); }
+  function gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk) {
+    gorevNumaralari().forEach((g, i) => {
+      if (oyun.gorunen.has(g.id)) return;
+      const px = PX(g.x), pz = PZ(g.z);
+      nokta(g.x, g.z, 9, g.agir ? '#ff8a7ae6' : '#ffe9a8e6', g.agir ? '#c01010' : '#3a2a10');
+      x.font = `${Math.round(13 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(g.emoji, px, pz + olcek);
+      // numara rozeti
+      const r = 5.5 * olcek, bx = px + 8 * olcek, by = pz - 8 * olcek;
+      x.beginPath(); x.arc(bx, by, r, 0, 7); x.fillStyle = g.agir ? '#c01010' : '#2a2a2a'; x.fill(); x.lineWidth = 1.2 * olcek; x.strokeStyle = '#fff'; x.stroke();
+      x.fillStyle = '#fff'; x.font = `900 ${Math.round(7.5 * olcek)}px Nunito, sans-serif`; x.fillText(String(i + 1), bx, by + 0.5 * olcek);
+      if (buyuk) {   // adı (üst kattaysa ⬆)
+        const yazi = (g.kat ? '⬆ ' : '') + (g.ad.length > 22 ? g.ad.slice(0, 21) + '…' : g.ad);
+        x.font = `800 ${Math.round(6.5 * olcek)}px Nunito, sans-serif`; x.lineWidth = 3 * olcek; x.strokeStyle = '#000c'; x.fillStyle = g.agir ? '#ffb0a0' : '#fff3c0';
+        x.strokeText(yazi, px, pz + 13 * olcek); x.fillText(yazi, px, pz + 13 * olcek);
+      }
+    });
+  }
+  // Listede bir göreve tıklayınca: harita büyür, yeri sarı halkayla yanıp söner
+  function goreviGoster(gid) {
+    const g = Kasaba.gorevler.find(x => x.id === gid); if (!g || !oyun) return;
+    oyun.darbe.push({ x: g.x, z: g.z, bas: performance.now(), sure: 4000, renk: 'sari' });
+    $('harita').classList.add('buyuk');
+    toast(`${g.emoji} ${kacis(g.ad)}${g.kat ? '<br><small>⬆ üst katta</small>' : ''}`, 2200);
+  }
   function haritaCiz() {
     const c = $('harita'), buyuk = c.classList.contains('buyuk');
     const istenen = buyuk ? 640 : 320;
@@ -916,17 +944,16 @@
     const olcek = N / 320;
     const nokta = (px, pz, r, renk, kenar = '#0008') => { x.beginPath(); x.arc(PX(px), PZ(pz), r * olcek, 0, 7); x.fillStyle = renk; x.fill(); x.lineWidth = 1.5 * olcek; x.strokeStyle = kenar; x.stroke(); };    if (oyun.rol === 'haydut') {
       x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
-      Kasaba.gorevler.forEach(g => { if (oyun.aktif.has(g.id) && !oyun.gorunen.has(g.id)) { nokta(g.x, g.z, 8, g.agir ? '#ff7a6acc' : '#ffe08acc', g.agir ? '#a01010' : '#7a5a10'); x.fillText('✉️', PX(g.x), PZ(g.z) + olcek); } });
+      gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk);
       if (oyun.kilik > 0) Kasaba.kiliklar.forEach(k => { if (oyun.kilikYerleri.has(k.id)) nokta(k.x, k.z, 4, '#a070ff'); });
       oyun.hedefler.forEach(no => { const v = varliklar.get(no); if (v && v.durum === 0) nokta(v.x, v.z, 4, HEDEF_RENK, '#fff'); });   // bıçaklanacak kişiler
     }
     else if (oyun.rol === 'serif') {   // şerif: kalan görevlerin yerleri (posta kutusundan öğrendiği yapılmışlar silinir)
-      x.font = `${Math.round(14 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
-      Kasaba.gorevler.forEach(g => { if (oyun.aktif.has(g.id) && !oyun.gorunen.has(g.id)) { nokta(g.x, g.z, 9, g.agir ? '#ff8a7ae6' : '#ffe9a8e6', g.agir ? '#c01010' : '#3a2a10'); x.fillText(g.emoji, PX(g.x), PZ(g.z) + olcek); } });
+      gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk);
     }
     const t = performance.now();
     oyun.darbe = oyun.darbe.filter(d => t - d.bas < (d.sure || 9000));
-    oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(PX(d.x), PZ(d.z), (5 + k * 22) * olcek, 0, 7); x.strokeStyle = `rgba(255,60,40,${1 - k})`; x.lineWidth = 3; x.stroke(); nokta(d.x, d.z, 4, '#ff3a2a'); });
+    oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(PX(d.x), PZ(d.z), (5 + k * 22) * olcek, 0, 7); x.strokeStyle = d.renk ? `rgba(255,220,40,${1 - k})` : `rgba(255,60,40,${1 - k})`; x.lineWidth = 3 * (d.renk ? 1.6 : 1); x.stroke(); if (!d.renk) nokta(d.x, d.z, 4, '#ff3a2a'); });
     // Cesetler (şerif): oyun boyunca 💀; görünen alanın dışındaysa kenarda yönünü gösteren kırmızı ok
     x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
     oyun.cesetler.forEach(c => x.fillText('💀', PX(c.x), PZ(c.z)));

@@ -35,7 +35,7 @@ label { font-weight: 800; font-size: 14px; }
 #ekler legend small { font-weight: 700; opacity: .7; }
 #ayarlar #ekler label { justify-content: flex-start; align-items: flex-start; gap: 8px; cursor: pointer; }
 #ekler input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #b5651d; }
-#ekler span { display: grid; line-height: 1.15; }
+#ekler span { display: block; flex: 1; text-align: left; line-height: 1.2; }
 #ekler small { font-size: 12px; opacity: .75; font-weight: 600; }
 #durbunBtn.basili { background: #ffffff99 !important; }
 #durbunGoz { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, transparent 0 38vmin, #000d 40vmin); }

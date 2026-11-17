@@ -341,6 +341,33 @@ const Kasaba = (() => {
     for (let t = 0.2; t < enFazla; t += 0.2) { if (icerdeBina(x + dx * t, z + dz * t, kat)) return t; }
     return enFazla;
   }
+  // Kurşun/lazer: ağaç, kaktüs, at, fıçı gibi katı süslere çarpar mı? (3B ışın; d birim vektör). İlk çarpma mesafesi
+  const ENGEL_BOY = { agac: 4, kuruAgac: 3.2, kaktus: 2.4, at: 1.9, sandik: 1.5, degirmen: 9, kaya: 0.8, kuyu: 1.3, araba: 2.2, fici: 1.1, ficiYigin: 1.6, saman: 1.4, yalak: 0.8, posta: 1.3, tabut: 0.9 };
+  function engelIsin(ox, oy, oz, dx, dy, dz, enFazla) {
+    let en = enFazla;
+    const hl = dx * dx + dz * dz;
+    for (const e of engeller) {
+      const boy = e.tur === 'agac' ? 3 + (e.cesit || 0) * 0.8 : ENGEL_BOY[e.tur];
+      if (!boy) continue;
+      const cx = ox - e.x, cz = oz - e.z;
+      if (cx * cx + cz * cz > (en + 3) * (en + 3)) continue;   // çok uzak
+      // gövde: dikey silindir (ağaçta gövde ince)
+      const r = e.tur === 'agac' || e.tur === 'kuruAgac' ? 0.34 : e.r;
+      if (hl > 1e-9) {
+        const b = 2 * (cx * dx + cz * dz), c = cx * cx + cz * cz - r * r, disk = b * b - 4 * hl * c;
+        if (disk >= 0) {
+          const t = (-b - Math.sqrt(disk)) / (2 * hl);
+          if (t > 0 && t < en) { const y = oy + dy * t; if (y >= 0 && y <= boy) en = t; }
+        }
+      }
+      if (e.tur === 'agac') {   // yapraklı taç: küre
+        const sx = ox - e.x, sy = oy - (boy + 0.5), sz = oz - e.z, R = 1.7;
+        const b = sx * dx + sy * dy + sz * dz, c = sx * sx + sy * sy + sz * sz - R * R, disk = b * b - c;
+        if (disk >= 0) { const t = -b - Math.sqrt(disk); if (t > 0 && t < en) en = t; }
+      }
+    }
+    return en;
+  }
   function icerdeBina(x, z, kat = 0, pay = 0) { for (const k of kutular) if (sayilir(k, kat) && x > k.x1 - pay && x < k.x2 + pay && z > k.z1 - pay && z < k.z2 + pay) return true; return false; }
 
   // ---------- Katlar ----------
@@ -536,7 +563,7 @@ const Kasaba = (() => {
 
   return {
     susler, icerdeBina, oturaklar: gorevler.filter(g => g.anim === 'otur' || g.anim === 'kumar' || g.anim === 'ye'), POSTA_GECIKME, KILIK_SAYISI, serifOdasi, odadaYer, berberUsta, barmenYeri, ANIMLER, animKodu, postaKutulari, esyaListesi, odaKapisi(kapali) { kapiKapali = !!kapali; }, get kapiKapali() { return kapiKapali; },
-    SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
+    engelIsin, SINIR, CADDE, ARA, RAY_Z, KAT_Y, DUVAR, KAPI, binalar, icBinalar, alanlar, engeller, gorevler, kiliklar, ugraklar,
     it, icerde, yolAcik, isin, yol, binaBul, icBina, zeminY, tavan, katOf, merdiven, duvarY, yerel, dunya, dugumSayisi: dugumler.length,
   };
 })();

@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 28;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 29;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -1101,8 +1101,6 @@
       const on = Kasaba.icerdeBina(oyun.x + Math.sin(oyun.yaw) * 0.18, oyun.z + Math.cos(oyun.yaw) * 0.18, Kasaba.katOf(oyun.y), 0.22) ? 0 : 0.18;   // duvara dayanınca içini görmesin
       k.position.set(oyun.x + Math.sin(oyun.yaw) * on, oyun.y + 1.66 * boy, oyun.z + Math.cos(oyun.yaw) * on);
     } else {
-      const nisanda = oyun.nisan && oyun.canli;
-      oyun.nisanUst = (oyun.nisanUst || 0) + ((nisanda ? 1 : 0) - (oyun.nisanUst || 0)) * 0.18;   // yumuşak geçiş
       const yuk = oyun.canli ? 2.85 : 2.6, uzak = oyun.canli ? 3.6 : 5;   // kamera hep biraz yukarıdan bakar
       // Omuz kayması: sağdaki duvara girmesin
       const kat = Kasaba.katOf(oyun.y), PAY = 0.28;   // kamera duvara en az bu kadar yaklaşır (yoksa duvarın içi görünür)
@@ -1126,14 +1124,8 @@
     }
     if (oyun.kamera !== 'goz' && oyun.canli && !oyun.kameraYakin && v) {
       // Kamera yukarıda; karakterin baş hizasından ileriye (15 m) bakar. Nişanda lazerin ilerideki bir noktasına bakar (lazer düz kalır)
-      const duz = new THREE.Vector3(oyun.x + d.x * 15, oyun.y + 1.5 * boy + d.y * 15, oyun.z + d.z * 15);
-      if (oyun.nisanUst > 0.01) {
-        oyun.nisanMes = oyun.nisanMes ?? 15;
-        oyun.nisanMes += (Math.max(8, Math.min(35, oyun.lazerT ?? 15)) - oyun.nisanMes) * 0.1;
-        const { o } = silahIsini(v, oyun.yaw, oyun.pitch);
-        duz.lerp(o.addScaledVector(d, oyun.nisanMes), oyun.nisanUst);
-      }
-      k.lookAt(duz);
+      // Nişan alırken de kamera hiç oynamaz (haydutla aynı); nişangâh lazerin ucuna kayar
+      k.lookAt(oyun.x + d.x * 15, oyun.y + 1.5 * boy + d.y * 15, oyun.z + d.z * 15);
       return;
     }
     k.lookAt(k.position.x + d.x, k.position.y + d.y, k.position.z + d.z);

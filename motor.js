@@ -10,7 +10,11 @@ const Motor = (() => {
   const SES_YAKIN = 5, SES_UZAK = 22;
   const BEKLEME = 15;          // şerifler başta kaç saniye odada kilitli
   const SERIF_TIP = 10;        // şerif kıyafeti (karakter.js'teki 11. tip)
-  const KOPEK_HAK = 2, KOPEK_MENZIL = 10, KAN_SURE = 15, TANIK_MENZIL = 9, TANIK_SURE = 7000, ARAMA_SURE = 3000, ARAMA_CEZA = 5000, ARAMA_MENZIL = 3.5;
+  const TANIK_MENZIL = 9, ARAMA_MENZIL = 3.5;   // diğer süre ve sayılar lobide seçilir (o.ed)
+  // Lobide seçilebilen değerler (izin verilenler) ve varsayılanlar
+  const ED_SECENEK = { kanSure: [7, 10, 13], cesetSure: [4, 6, 8], aramaHak: [1, 2, 3], aramaSure: [2, 3, 4], aramaCeza: [3, 5, 7], kopekHak: [1, 2, 3], kopekMenzil: [7, 10, 13], tanikSure: [5, 7, 10], postaOran: [25, 50, 75] };
+  const ED_VARS = { kanSure: 10, cesetSure: 6, aramaHak: 2, aramaSure: 3, aramaCeza: 5, kopekHak: 2, kopekMenzil: 10, tanikSure: 7, postaOran: 50 };
+  const edOku = ed => Object.fromEntries(Object.keys(ED_VARS).map(k => [k, ED_SECENEK[k].includes(+ed?.[k]) ? +ed[k] : ED_VARS[k]]));
   const DONUS = 2.6;           // kasabalıların dönüş hızı (radyan/sn civarı) — oyuncu gibi yumuşak dönsünler
   let o = null;
   let cb = { kisiye() {}, herkese() {} };
@@ -51,7 +55,7 @@ const Motor = (() => {
       aktif: new Set(karistir(Kasaba.gorevler.map(g => g.id)).slice(0, Math.min(Kasaba.gorevler.length, ayar.hedef))),   // bu oyunun görevleri
       kilikYerleri: new Set(karistir(Kasaba.kiliklar.map(k => k.id)).slice(0, Kasaba.KILIK_SAYISI)),   // her oyunda farklı; sadece haydutlara söylenir
       oldurGerek: [0, 3, 5, 10].includes(+ayar.oldur) ? +ayar.oldur : 0, oldurulen: 0, hedefBotlar: new Set(),   // haydutların bıçaklaması gereken kasabalılar
-      ek: { ...(ayar.ek || {}) },   // açılışta seçilen şerif yardımcıları: kan, ceset, toz, arama, durbun, kopek, tanik, posta
+      ek: { ...(ayar.ek || {}) }, ed: edOku(ayar.ed),   // açılışta seçilen şerif yardımcıları: kan, ceset, toz, arama, durbun, kopek, tanik, posta
     };
     Kasaba.odaKapisi(true);
     oyuncular.forEach((p, i) => {
@@ -61,7 +65,7 @@ const Motor = (() => {
       if (rol === 'serif') { v.tip = SERIF_TIP; v.yaw = Math.PI / 2; }   // şerif kıyafeti, kapıya (doğuya) bakar
       o.varliklar.set(no, v);
       o.oyuncular.push({ id: p.id, ad: p.ad, no, rol, durum: 0,
-        hak: ayar.hak, kilik: ayar.kilik, muhbir: 1, muhbirAktif: false, kanal: 'genel', sonAtes: 0, is: null, kopek: o.ek.kopek ? KOPEK_HAK : 0, donma: 0, arama: o.ek.arama ? Math.max(1, Math.min(3, ayar.aramaHak | 0 || 2)) : 0 });
+        hak: ayar.hak, kilik: ayar.kilik, muhbir: 1, muhbirAktif: false, kanal: 'genel', sonAtes: 0, is: null, kopek: o.ek.kopek ? o.ed.kopekHak : 0, donma: 0, arama: o.ek.arama ? o.ed.aramaHak : 0 });
     });
     for (let i = n; i < toplam; i++) o.varliklar.set(nolar[i], npcYap(nolar[i]));
     // Paketteki sıra numaraya göre olsun (ekleme sırası oyuncuları ele vermesin)
@@ -137,11 +141,11 @@ const Motor = (() => {
         h.durum = 3; h.h = 0; h.olumZaman = simdi; h.yol = null; h.yaw = Math.atan2(h.x - v.x, h.z - v.z);   // ceset oyun boyunca yerde kalır
         o.hedefBotlar.delete(m.no); o.oldurulen++;
         o.yeniKasabali.push(simdi + 15000);   // kalabalık azalmasın
-        o.oyuncular.forEach(q => cb.kisiye(q.id, { tip: 'cinayet', oldurulen: o.oldurulen, gerek: o.oldurGerek, kim: q.rol === 'haydut' ? p.ad : null, ...(o.ek.ceset && q.rol === 'serif' ? { x: h.x, z: h.z } : {}) }));
-        if (o.ek.kan) cb.herkese({ tip: 'kan', no: p.no, sure: KAN_SURE });   // bıçaklayanın eli kanlanır
+        o.oyuncular.forEach(q => cb.kisiye(q.id, { tip: 'cinayet', oldurulen: o.oldurulen, gerek: o.oldurGerek, kim: q.rol === 'haydut' ? p.ad : null, ...(o.ek.ceset && q.rol === 'serif' ? { x: h.x, z: h.z, sure: o.ed.cesetSure } : {}) }));
+        if (o.ek.kan) cb.herkese({ tip: 'kan', no: p.no, sure: o.ed.kanSure });   // bıçaklayanın eli kanlanır
         if (o.ek.tanik) {   // yakındaki kasabalılar katili parmakla gösterir
           const b = Kasaba.icBina(v.x, v.z);
-          o.varliklar.forEach(w => { if (!w.oyuncuId && w.durum === 0 && w !== h && Math.hypot(w.x - v.x, w.z - v.z) < TANIK_MENZIL && Math.abs((w.y || 0) - (v.y || 0)) < 1.5 && Kasaba.icBina(w.x, w.z) === b) w.tanik = { no: p.no, bitis: simdi + TANIK_SURE }; });
+          o.varliklar.forEach(w => { if (!w.oyuncuId && w.durum === 0 && w !== h && Math.hypot(w.x - v.x, w.z - v.z) < TANIK_MENZIL && Math.abs((w.y || 0) - (v.y || 0)) < 1.5 && Kasaba.icBina(w.x, w.z) === b) w.tanik = { no: p.no, bitis: simdi + o.ed.tanikSure * 1000 }; });
         }
         hedefYay();
         kontrol();
@@ -155,15 +159,15 @@ const Motor = (() => {
         const hp = h.oyuncuId ? oyuncu(h.oyuncuId) : null;
         if (hp && hp.rol === 'serif') return;
         if (Math.hypot(h.x - v.x, h.z - v.z) > 2.4 || Math.abs((h.y || 0) - (v.y || 0)) > 1.2 || Kasaba.icBina(v.x, v.z) !== Kasaba.icBina(h.x, h.z)) return;
-        p.is = { tur: 'ara', no: m.no, bitis: simdi + ARAMA_SURE, x: v.x, z: v.z, r: 1.2 };
-        cb.kisiye(id, { tip: 'is', ad: '🔎 Üstü aranıyor', sure: ARAMA_SURE / 1000 });
-        if (hp) cb.kisiye(hp.id, { tip: 'araniyor', kim: p.ad, sure: ARAMA_SURE / 1000 });   // sadece haber; görevi bozulmaz, el kaldırmaz
+        p.is = { tur: 'ara', no: m.no, bitis: simdi + o.ed.aramaSure * 1000, x: v.x, z: v.z, r: 1.2 };
+        cb.kisiye(id, { tip: 'is', ad: '🔎 Üstü aranıyor', sure: o.ed.aramaSure });
+        if (hp) cb.kisiye(hp.id, { tip: 'araniyor', kim: p.ad, sure: o.ed.aramaSure });   // sadece haber; görevi bozulmaz, el kaldırmaz
         break;
       }
       case 'kopek': {   // köpek 10 m içinde haydut koklar
         if (!o.ek.kopek || !canlimi(p) || p.rol !== 'serif' || !v || p.kopek <= 0 || !o.kapiAcildi) return;
         p.kopek--;
-        const buldu = o.oyuncular.some(q => { if (q.rol !== 'haydut' || q.durum !== 0) return false; const w = o.varliklar.get(q.no); return w && Math.hypot(w.x - v.x, w.z - v.z) < KOPEK_MENZIL && Math.abs((w.y || 0) - (v.y || 0)) < 2; });
+        const buldu = o.oyuncular.some(q => { if (q.rol !== 'haydut' || q.durum !== 0) return false; const w = o.varliklar.get(q.no); return w && Math.hypot(w.x - v.x, w.z - v.z) < o.ed.kopekMenzil && Math.abs((w.y || 0) - (v.y || 0)) < 2; });
         cb.kisiye(id, { tip: 'kopek', buldu, kalan: p.kopek });
         cb.herkese({ tip: 'havla', no: p.no, x: v.x, z: v.z, buldu });
         break;
@@ -384,7 +388,7 @@ const Motor = (() => {
     // Şerifler ipucu seviyesini (aranma) 5-10 sn gecikmeyle öğrenir; sıra no ile eski haber yenisini ezmez
     o.ipucuSira = (o.ipucuSira || 0) + 1;
     o.oyuncular.forEach(q => { if (q.rol === 'serif') o.bekleyen.push({ zaman: simdi + rnd(5000, 10000), id: q.id, mesaj: { tip: 'ipucu', seviye: o.aranma, sira: o.ipucuSira, olayZamani: simdi } }); });
-    const gecikme = Kasaba.POSTA_GECIKME[o.aranma] * (o.ek.posta ? 0.5 : 1);
+    const gecikme = Kasaba.POSTA_GECIKME[o.aranma] * (o.ek.posta ? o.ed.postaOran / 100 : 1);
     o.tamamlanan.push({ gid, t: simdi, gorunur: simdi + gecikme, seviye: o.aranma });
     cb.kisiye(p.id, { tip: 'is', bitti: true });
     const metin = `${g.emoji} ${g.olay}`;
@@ -416,8 +420,8 @@ const Motor = (() => {
       cb.kisiye(p.id, { tip: 'arama', sonuc: 'haydut', ad: hp.ad });
       kontrol();
     } else {   // masum çıktı: şerif 5 sn bekler (ateş edemez)
-      p.donma = simdi + ARAMA_CEZA;
-      cb.kisiye(p.id, { tip: 'arama', sonuc: 'masum', sure: ARAMA_CEZA / 1000 });
+      p.donma = simdi + o.ed.aramaCeza * 1000;
+      cb.kisiye(p.id, { tip: 'arama', sonuc: 'masum', sure: o.ed.aramaCeza });
       if (hp) cb.kisiye(hp.id, { tip: 'araniyor', bitti: true });
     }
   }

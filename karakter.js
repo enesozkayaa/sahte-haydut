@@ -9,7 +9,7 @@ const Karakter = (() => {
     { ad: 'Barmen', ten: '#d9a37e', gomlek: '#f2f2ee', yelek: '#1d1d22', pantolon: '#1d1d22', sapka: 'kel', onluk: '#ffffff', bıyık: '#2a1a10', buyukBiyik: true, gen: 1.12 },
     { ad: 'Saloon Kızı', ten: '#f0c8a8', elbise: '#b5243b', gomlek: '#b5243b', sac: '#7a2a1a', sapka: 'topuz', tuy: '#f5d76e', boy: 0.95 },
     { ad: 'Madenci', ten: '#c99573', gomlek: '#7a7f86', yelek: '#4a6fa5', pantolon: '#4a6fa5', sapka: 'baret', sapkaRenk: '#6b4a2a', sakal: '#bdbdbd', uzunSakal: true },
-    { ad: 'Rahip', ten: '#e8c0a0', gomlek: '#16161a', pantolon: '#16161a', elbise: '#16161a', yaka: '#ffffff', sapka: 'duz', sapkaRenk: '#111114', boy: 1.04 },
+    { ad: 'İmam', ten: '#e8c0a0', gomlek: '#2f3d33', pantolon: '#2f3d33', elbise: '#2f3d33', sapka: 'sarik', sapkaRenk: '#f4f1e8', sakal: '#3a2a1a', boy: 1.04 },
     { ad: 'Doktor', ten: '#f1cfb0', gomlek: '#6c6f75', yelek: '#53565c', pantolon: '#4a4c52', sapka: 'silindir', sapkaRenk: '#141418', gozluk: true, bıyık: '#8a6a4a', canta: '#3a2416' },
     { ad: 'Çiftçi', ten: '#c98d5f', gomlek: '#4f8a3c', yelek: '#8a5a2c', pantolon: '#8a5a2c', sapka: 'hasir', sapkaRenk: '#e2c46b', askili: true },
     { ad: 'Demirci', ten: '#b57a55', gomlek: '#b57a55', onluk: '#5a3820', pantolon: '#26262a', sapka: 'kel', sakal: '#1a1410', gen: 1.25, boy: 1.05, ciplakKol: true },
@@ -113,6 +113,7 @@ const Karakter = (() => {
         parca(silindir(0.205, 0.205, 0.05, 12), '#c9a23a', 0, 0.21, 0, bas);
         break;
       }
+      case 'sarik': { const s = parca(kure(0.21, 12), sr, 0, 0.17, 0, bas); s.scale.set(1, 0.62, 1); parca(silindir(0.2, 0.2, 0.06, 12), sr, 0, 0.1, 0, bas); parca(kure(0.07, 8), '#8a2a2a', 0, 0.27, 0, bas); break; }
       case 'duz': parca(silindir(0.34, 0.34, 0.04, 14), sr, 0, 0.17, 0, bas); parca(silindir(0.15, 0.15, 0.1, 10), sr, 0, 0.22, 0, bas); break;
       case 'topuz': parca(kure(0.11, 10), t.sac, 0, 0.2, -0.1, bas); if (t.tuy) { const f = parca(kutu(0.04, 0.22, 0.03), t.tuy, 0.1, 0.27, -0.05, bas); f.rotation.z = -0.4; } break;
       default: parca(kutu(0.31, 0.06, 0.31), t.ten, 0, 0.17, 0, bas);   // kel
@@ -255,8 +256,8 @@ const Karakter = (() => {
         Object.assign(p, { gx: 0.32 + sn * 0.04, oL: -0.55, oR: -0.55, eL: -1.25, eR: -1.25 }); break;
       case 'ver':      // barmene para uzatır
         Object.assign(p, { gx: 0.1, oR: -1.4 + sn * 0.1, eR: -0.15, oL: -0.25, eL: -0.3 }); break;
-      case 'dua':      // diz çöker, ellerini göğsünde birleştirir
-        Object.assign(p, { kL: 0, kR: 0, dL: 1.57, dR: 1.57, gy: -0.4, gx: 0.12 + sn * 0.03, oL: -1.05, oR: -1.05, eL: -1.35, eR: -1.35 }); break;
+      case 'dua':      // diz çöküp oturur, ellerini göğüs hizasında avuçları yukarı açar
+        Object.assign(p, { kL: 0, kR: 0, dL: 1.57, dR: 1.57, gy: -0.4, gx: 0.06 + sn * 0.02, oL: -0.55, oR: -0.55, eL: -1.15, eR: -1.15 }); break;
       case 'bicak': {  // tek vuruş: bıçağı kaldırır, bir kez saplar, öyle kalır
         if (u.sonAnim !== 'bicak') u.bicakBas = f;
         const d = Math.min(1, (f - u.bicakBas) / 4.2);   // ~0,7 sn

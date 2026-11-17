@@ -80,22 +80,23 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 35;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 37;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
   const ekId = k => 'ek' + k[0].toUpperCase() + k.slice(1);
-  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayOldur', 'ayKasabali', 'ayKilik', 'ayAramaHak', ...EKLER.map(ekId)].forEach(id => $(id)?.addEventListener('change', () => ayarYay()));
+  const ED_ADLAR = [...document.querySelectorAll('[id^="ed_"]')].map(e => e.id.slice(3));   // her özelliğin süre/sayı seçimleri
+  ['ayRolMod', 'ayHaydut', 'ayHak', 'aySure', 'ayHedef', 'ayOldur', 'ayKasabali', 'ayKilik', ...ED_ADLAR.map(a => 'ed_' + a), ...EKLER.map(ekId)].forEach(id => $(id)?.addEventListener('change', () => ayarYay()));
   function ayarOku() {
-    return { rolMod: $('ayRolMod').value, haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value, oldur: +$('ayOldur').value, aramaHak: +($('ayAramaHak')?.value || 2), ek: Object.fromEntries(EKLER.map(k => [k, !!$(ekId(k))?.checked])) };
+    return { rolMod: $('ayRolMod').value, haydut: +$('ayHaydut').value || 1, hak: +$('ayHak').value, sure: +$('aySure').value, hedef: +$('ayHedef').value, kasabali: +$('ayKasabali').value, kilik: +$('ayKilik').value, oldur: +$('ayOldur').value, ed: Object.fromEntries(ED_ADLAR.map(a => [a, +$('ed_' + a).value])), ek: Object.fromEntries(EKLER.map(k => [k, !!$(ekId(k))?.checked])) };
   }
-  const ayarYazi = a => `${a.rolMod === 'rastgele' ? `🎲 Rastgele: 🦹 ${a.haydut} haydut · ⭐ ${Math.max(1, Ag.oyuncular.length - a.haydut)} şerif` : '🎭 Roller: herkes kendi seçer'} · 🔫 ${a.hak} hak · ⏱️ ${a.sure} dk · 🎯 ${a.hedef} görev${a.oldur ? ` · 🔪 ${a.oldur} kişi` : ''} · 👥 ${a.kasabali} kasabalı · 👔 ${a.kilik} kılık${(() => { const l = EKLER.filter(k => a.ek?.[k]); return l.length ? ' · 🕵️ ' + l.map(k => EK_EMOJI[k]).join('') + (a.ek?.arama ? ` (🔎×${a.aramaHak || 2})` : '') : ''; })()}`;
+  const ayarYazi = a => `${a.rolMod === 'rastgele' ? `🎲 Rastgele: 🦹 ${a.haydut} haydut · ⭐ ${Math.max(1, Ag.oyuncular.length - a.haydut)} şerif` : '🎭 Roller: herkes kendi seçer'} · 🔫 ${a.hak} hak · ⏱️ ${a.sure} dk · 🎯 ${a.hedef} görev${a.oldur ? ` · 🔪 ${a.oldur} kişi` : ''} · 👥 ${a.kasabali} kasabalı · 👔 ${a.kilik} kılık${(() => { const l = EKLER.filter(k => a.ek?.[k]); return l.length ? ' · 🕵️ ' + l.map(k => EK_EMOJI[k]).join('') + (a.ek?.arama ? ` (🔎×${a.ed?.aramaHak || 2})` : '') : ''; })()}`;
   function ayarYay(listedenGeldi) {
     if (!Ag.evMi) return;
     const a = ayarOku(), degisti = a.rolMod !== lobiAyar.rolMod; lobiAyar = a;
     $('ayarOzet').textContent = ayarYazi(a); Ag.yayinla({ tip: 'ayar', ayar: a, surum: SURUM });
     if (degisti && !listedenGeldi) lobiListesi(Ag.oyuncular); else rolDugmeleri();
-    $('aramaHakSatir')?.classList.toggle('gizli', !a.ek?.arama);   // üst arama işaretlenince hemen altında açılır
+    EKLER.forEach(k => $('ekAyar_' + k)?.classList.toggle('gizli', !a.ek?.[k]));   // işaretlenince hemen altında süre/sayı seçimi açılır
   }
 
   $('kodKopyalaBtn').onclick = () => {
@@ -187,7 +188,7 @@
       case 'cinayet': if (oyun) {
         oyun.oldurulen = m.oldurulen; hudGuncelle();
         if (oyun.rol === 'serif') {
-          if (m.x !== undefined) { oyun.darbe.push({ x: m.x, z: m.z, bas: performance.now(), sure: 8000, ceset: true }); oyun.cesetler.push({ x: m.x, z: m.z }); }   // ceset haritada yanar, kurukafa kalır
+          if (m.x !== undefined) { oyun.darbe.push({ x: m.x, z: m.z, bas: performance.now(), sure: (m.sure || 6) * 1000, ceset: true }); oyun.cesetler.push({ x: m.x, z: m.z }); }   // ceset haritada yanar, kurukafa kalır
           toast(`🔪 Bir kasabalı bıçaklandı!<br><small>${m.x !== undefined ? 'Yeri haritanda kırmızı yanıyor!' : 'Cesedi yerde yatıyor, etrafa bak'}</small>`, 2600); akisEkle(`🔪 Bir kasabalı bıçaklandı (${m.oldurulen}/${m.gerek})`, 'kotu'); Ses.kotu();
         }
         else { akisEkle(`🔪 Hedef bıçaklandı (${m.oldurulen}/${m.gerek})${m.kim ? ' – ' + m.kim : ''}`, 'takim'); Ses.gorev(); }
@@ -215,7 +216,7 @@
       case 'araniyor': if (oyun) aranıyorum(m); break;
       case 'arama': if (oyun) aramaSonucu(m); break;
       case 'aramaHak': if (oyun) { oyun.aramaHak = m.kalan; hudGuncelle(); } break;
-      case 'kopek': if (oyun) { oyun.kopek = m.kalan; hudGuncelle(); toast(m.buldu ? '🐕 Köpek havlıyor!<br><small>10 m içinde bir haydut var</small>' : '🐕 Köpek sakin<br><small>Yakınında haydut yok</small>', 2600); if (!m.buldu) Ses.inle(); } break;
+      case 'kopek': if (oyun) { oyun.kopek = m.kalan; hudGuncelle(); toast(m.buldu ? `🐕 Köpek havlıyor!<br><small>${oyun.ayar.ed?.kopekMenzil || 10} m içinde bir haydut var</small>` : '🐕 Köpek sakin<br><small>Yakınında haydut yok</small>', 2600); if (!m.buldu) Ses.inle(); } break;
       case 'havla': if (oyun) havlamaGoster(m); break;
       case 'serifler': serifPaneli(m.liste); break;
       case 'lobi': oyunuTemizle(); ekran('lobi'); break;
@@ -241,13 +242,13 @@
       // (şerif: sadece posta kutusuna bakınca; haydut: sadece 1 kerelik 'kalanları göster' ile)
       aktif: new Set(m.gorevler || Kasaba.gorevler.map(g => g.id)), postaN: 0, aranma: 0, kilikYerleri: new Set(m.kiliklar || []),   // bu oyunun görevleri (görev hedefi kadar)
       gorevSayi: 0, yapilan: new Set(), gorunen: new Set(), hedefler: new Set(), oldurulen: 0, oldurGerek: m.ayar.oldur || 0, bicakBitis: 0, bicakHedef: null, kalanHakki: 1, kalan: m.sure, sonGonder: 0, sonAtes: 0, darbe: [],
-      ek: m.ayar.ek || {}, kanli: new Map(), cesetler: [], kopek: m.ayar.ek?.kopek ? 2 : 0, donmaBitis: 0, arananBitis: 0, aramaHak: m.ayar.ek?.arama ? (m.ayar.aramaHak || 2) : 0, durbun: false, fov: 70,
+      ek: m.ayar.ek || {}, kanli: new Map(), cesetler: [], kopek: m.ayar.ek?.kopek ? (m.ayar.ed?.kopekHak || 2) : 0, donmaBitis: 0, arananBitis: 0, aramaHak: m.ayar.ek?.arama ? (m.ayar.ed?.aramaHak || 2) : 0, durbun: false, fov: 70,
     };
     if (oyun.rol === 'serif') {   // seçilen yardımcıları şerife anlat
-      const l = [oyun.ek.arama && '🔎 Yanına yanaşıp E: üstünü ara', oyun.ek.durbun && '🔭 Z: dürbün', oyun.ek.kopek && '🐕 B: köpeği koklat (2 kez)', '📡 R: muhbir', oyun.ek.kan && '🩸 Kanlı eller bıçaklayanı ele verir', oyun.ek.ceset && '🗺️ Ceset haritada yanar', oyun.ek.tanik && '👉 Tanıklar katili parmakla gösterir', oyun.ek.toz && '💨 Koşanlar toz kaldırır', oyun.ek.posta && '📬 Posta daha hızlı'].filter(Boolean);
+      const l = [oyun.ek.arama && '🔎 Yanına yanaşıp E: üstünü ara', oyun.ek.durbun && '🔭 Z: dürbün', oyun.ek.kopek && `🐕 B: köpeği koklat (${oyun.ayar.ed?.kopekHak || 2} kez, ${oyun.ayar.ed?.kopekMenzil || 10} m)`, '📡 R: muhbir', oyun.ek.kan && '🩸 Kanlı eller bıçaklayanı ele verir', oyun.ek.ceset && '🗺️ Ceset haritada yanar', oyun.ek.tanik && '👉 Tanıklar katili parmakla gösterir', oyun.ek.toz && '💨 Koşanlar toz kaldırır', oyun.ek.posta && '📬 Posta daha hızlı'].filter(Boolean);
       if (l.length) setTimeout(() => { if (oyun) akisEkle('🕵️ ' + l.join(' · '), 'iyi'); }, 50);
     } else if (oyun.ek.kan || oyun.ek.tanik || oyun.ek.toz || oyun.ek.arama) {
-      const l = [oyun.ek.kan && '🩸 bıçaklayınca elin 15 sn kanlı görünür', oyun.ek.tanik && '👉 yakındaki kasabalılar seni parmakla gösterir', oyun.ek.toz && '💨 koşarsan toz kaldırırsın', oyun.ek.arama && '🔎 şerifler üstünü arayabilir (kaçarsan şüphelenir)'].filter(Boolean);
+      const l = [oyun.ek.kan && `🩸 bıçaklayınca elin ${oyun.ayar.ed?.kanSure || 10} sn kanlı görünür`, oyun.ek.tanik && '👉 yakındaki kasabalılar seni parmakla gösterir', oyun.ek.toz && '💨 koşarsan toz kaldırırsın', oyun.ek.arama && '🔎 şerifler üstünü arayabilir (kaçarsan şüphelenir)'].filter(Boolean);
       setTimeout(() => { if (oyun) akisEkle('⚠️ Dikkat: ' + l.join(' · '), 'kotu'); }, 50);
     }
     $('akis').innerHTML = '';

@@ -71,15 +71,20 @@
         <label>👔 Kılık değiştirme hakkı <select id="ayKilik"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
         <fieldset id="ekler">
           <legend>🕵️ Şerife yardımcı özellikler <small>(seçtiklerin oyunda olur)</small></legend>
-          <label><input type="checkbox" id="ekKan"> <span><b>🩸 Kanlı el</b><br><small>Bıçaklayan haydudun eli ve gömleği 15 sn kanlı görünür</small></span></label>
-          <label><input type="checkbox" id="ekCeset"> <span><b>🗺️ Ceset haritada</b><br><small>Biri bıçaklanınca yeri şeriflerin haritasında 6 sn yanar</small></span></label>
+          <label><input type="checkbox" id="ekKan"> <span><b>🩸 Kanlı el</b><br><small>Bıçaklayan haydudun eli ve gömleği bir süre kanlı görünür</small></span></label>
+          <div id="ekAyar_kan" class="ekAyar gizli"><span>Kan ne kadar görünsün <select id="ed_kanSure"><option value="7">7 sn</option><option value="10" selected>10 sn</option><option value="13">13 sn</option></select></span></div>
+          <label><input type="checkbox" id="ekCeset"> <span><b>🗺️ Ceset haritada</b><br><small>Biri bıçaklanınca yeri şeriflerin haritasında bir süre yanar</small></span></label>
+          <div id="ekAyar_ceset" class="ekAyar gizli"><span>Haritada ne kadar yansın <select id="ed_cesetSure"><option value="4">4 sn</option><option value="6" selected>6 sn</option><option value="8">8 sn</option></select></span></div>
           <label><input type="checkbox" id="ekToz"> <span><b>💨 Toz bulutu</b><br><small>Koşan herkes toz kaldırır, koşmak uzaktan görünür</small></span></label>
-          <label><input type="checkbox" id="ekArama"> <span><b>🔎 Üst arama</b><br><small>Şerif birine yanaşıp E'ye basar, 3 sn yanında yürüyerek üstünü arar (hak sayısı altta seçilir). Haydutsa yakalanır, masumsa şerif 5 sn bekler</small></span></label>
-          <div id="aramaHakSatir" class="gizli">↳ Her şerifin üst arama hakkı <select id="ayAramaHak" title="Her şerifin arama hakkı"><option value="1">1 hak</option><option value="2" selected>2 hak</option><option value="3">3 hak</option></select></div>
+          <label><input type="checkbox" id="ekArama"> <span><b>🔎 Üst arama</b><br><small>Şerif birine yanaşıp E'ye basar, yanında yürüyerek üstünü arar. Haydutsa yakalanır, masumsa şerif bir süre bekler</small></span></label>
+          <div id="ekAyar_arama" class="ekAyar gizli"><span>Her şerifin arama hakkı <select id="ed_aramaHak"><option value="1">1 hak</option><option value="2" selected>2 hak</option><option value="3">3 hak</option></select></span> <span>Arama ne kadar sürsün <select id="ed_aramaSure"><option value="2">2 sn</option><option value="3" selected>3 sn</option><option value="4">4 sn</option></select></span> <span>Masumu arayınca bekleme <select id="ed_aramaCeza"><option value="3">3 sn</option><option value="5" selected>5 sn</option><option value="7">7 sn</option></select></span></div>
           <label><input type="checkbox" id="ekDurbun"> <span><b>🔭 Dürbün</b><br><small>Şerif Z ile uzağı yakından görür</small></span></label>
-          <label><input type="checkbox" id="ekKopek"> <span><b>🐕 Köpek</b><br><small>Şerif 2 kez köpeği koklatır (B): 10 m içinde haydut varsa havlar</small></span></label>
-          <label><input type="checkbox" id="ekTanik"> <span><b>👉 Tanıklar</b><br><small>Bıçaklamayı gören kasabalılar 7 sn katili parmakla gösterir</small></span></label>
-          <label><input type="checkbox" id="ekPosta"> <span><b>📬 Hızlı posta</b><br><small>Görev haberleri posta kutusuna yarı sürede düşer</small></span></label>
+          <label><input type="checkbox" id="ekKopek"> <span><b>🐕 Köpek</b><br><small>Şerif köpeği koklatır (B): yakında haydut varsa havlar</small></span></label>
+          <div id="ekAyar_kopek" class="ekAyar gizli"><span>Köpek hakkı <select id="ed_kopekHak"><option value="1">1 kez</option><option value="2" selected>2 kez</option><option value="3">3 kez</option></select></span> <span>Koklama mesafesi <select id="ed_kopekMenzil"><option value="7">7 m</option><option value="10" selected>10 m</option><option value="13">13 m</option></select></span></div>
+          <label><input type="checkbox" id="ekTanik"> <span><b>👉 Tanıklar</b><br><small>Bıçaklamayı gören kasabalılar bir süre katili parmakla gösterir</small></span></label>
+          <div id="ekAyar_tanik" class="ekAyar gizli"><span>Ne kadar göstersinler <select id="ed_tanikSure"><option value="5">5 sn</option><option value="7" selected>7 sn</option><option value="10">10 sn</option></select></span></div>
+          <label><input type="checkbox" id="ekPosta"> <span><b>📬 Hızlı posta</b><br><small>Görev haberleri posta kutusuna daha çabuk düşer</small></span></label>
+          <div id="ekAyar_posta" class="ekAyar gizli"><span>Haber ne kadar sürede düşsün <select id="ed_postaOran"><option value="25">normal sürenin %25</option><option value="50" selected>normal sürenin %50</option><option value="75">normal sürenin %75</option></select></span></div>
         </fieldset>
       </div>
       <p id="ayarOzet" class="durum"></p>

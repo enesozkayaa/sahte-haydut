@@ -37,7 +37,7 @@ const Kasaba = (() => {
     B('terzi', 'Terzi', '👔', -21, gz(10), 11, 10, 5.5, '#a35d7a', 'k'),
     B('madenci', 'Madenci Dükkânı', '⛏️', 17, gz(10), 12, 10, 5.5, '#7a6a4f', 'k'),
     B('demirci', 'Demirci', '🔨', 32, gz(11), 13, 11, 5, '#4b4642', 'k'),
-    B('kilise', 'Kilise', '⛪', 53, gz(18), 15, 18, 9, '#efe9dc', 'k'),
+    B('kilise', 'Cami', '🕌', 53, gz(18), 15, 18, 9, '#efe9dc', 'k'),   // kimlik 'kilise' kaldı, görünüşü cami
     B('ev4', 'Ev', '🏠', 74, gz(10), 10, 10, 5, '#9a7f9a', 'k', 'ev'),
     // Uzak kuzey
     B('istasyon', 'Tren İstasyonu', '🚂', -42, -62, 24, 9, 6, '#8c6b4a', 'g'),
@@ -58,7 +58,7 @@ const Kasaba = (() => {
   // Katı olmayan alanlar (çit, mezarlık): haritada çizilir, içinden yürünür
   const alanlar = [
     { id: 'agil', ad: 'Ağıl', emoji: '🐄', x: -16, z: 62, g: 16, d: 13 },
-    { id: 'mezarlik', ad: 'Mezarlık', emoji: '✝️', x: 42, z: 62, g: 16, d: 12 },
+    { id: 'mezarlik', ad: 'Mezarlık', emoji: '🪦', x: 42, z: 62, g: 16, d: 12 },
   ];
   // Küçük engeller (kuyu, fıçılar, at arabaları): yuvarlak, r yarıçap (sadece zemin katta)
   const engeller = [
@@ -121,7 +121,7 @@ const Kasaba = (() => {
     G('ilac', 'Doktordan ilaç çal', 'Doktordan ilaç çalındı', '💊', 4, icNokta('doktor', 2.5, -3.2)),
     G('altin', 'Altın tozu çal', 'Madenciden altın tozu çalındı', '✨', 5, icNokta('madenci', 2.5, -3)),
     G('kilit', 'Demircide örste kilit kır', 'Demircide kilit kırıldı', '🔨', 4, icNokta('demirci', -2, 0.25), 'dov'),
-    G('bagis', 'Bağış kutusunu boşalt', 'Kilisenin bağış kutusu boşaltıldı', '⛪', 4, icNokta('kilise', 3, -6)),
+    G('bagis', 'Bağış kutusunu boşalt', 'Caminin bağış kutusu boşaltıldı', '🕌', 4, icNokta('kilise', 3, -6)),
     G('dinamit', 'Raya dinamit koy', 'Demiryoluna dinamit kondu', '🧨', 6, { x: -64, z: -72, yon: Math.PI }, 'cok'),
     G('su', 'Su kulesini del', 'Su kulesi delindi', '💧', 4, kapiOnu('sukulesi'), 'dov'),
     G('kibrit', 'Samanlığa kibrit at', 'Samanlıkta yangın çıktı', '🔥', 4, icNokta('samanlik', 3, -3), 'cok'),
@@ -134,7 +134,7 @@ const Kasaba = (() => {
     G('yemek', 'Otelde yemek ye', 'Otelde biri yemek yedi', '🍽️', 5, icNokta('otel', -4, 1.6, 0, 0), 'ye'),
     G('yas', 'Tabutun başında yas tut', 'Mezarlıkta biri yas tuttu', '⚰️', 5, { x: 42, z: 61.7, yon: Math.PI }, 'yas'),
     G('rusvet', 'Barmene rüşvet ver', 'Salonda barmene rüşvet verildi', '💵', 4, icNokta('salon', 6.5, -1.9), 'ver'),
-    G('dua', 'Kilisede dua et', 'Kilisede biri dua etti', '🙏', 5, icNokta('kilise', 0, -5.2), 'dua'),
+    G('dua', 'Camide dua et', 'Camide biri dua etti', '🤲', 5, icNokta('kilise', 0, -5.2), 'dua'),
     G('vergi', 'İlan tahtasına sahte vergi duyurusu as', 'İlan tahtasına sahte vergi duyurusu asıldı', '📢', 4, { x: -14, z: 8.3, yon: 0 }, 'uzan'),
     G('icki', 'Salonun içkisini sulandır', 'Salonun içkisi sulandırıldı', '🍺', 4, icNokta('salon', 1.4, -1.9), 'dok'),
   ];
@@ -236,9 +236,11 @@ const Kasaba = (() => {
       case 'demirci':   // örs, kızgın demir, alet duvarı
         k(0.9, 0.35, 0.4, -2, 0.85, -0.6, metal, { carp: true, taban: 0 }); k(0.4, 0.7, 0.3, -2, 0.35, -0.6, koyu2, { carp: false });
         k(0.3, 0.06, 0.25, -1.6, 1.06, -0.6, '#ff7a2a', { isik: '#aa3a00', carp: false }); k(4, 1.6, 0.15, 2, 1.6, -d2 + 0.3, koyu2, { carp: false }); break;
-      case 'kilise':   // sıralar ve kürsü
-        for (let i = 0; i < 4; i++) [-1, 1].forEach(sv => k(4, 0.5, 0.6, sv * 3.2, 0.25, 3 - i * 2, ahsap));
-        k(2.2, 1.1, 1, -3.5, 0.55, -d2 + 1.5, beyaz); k(0.6, 0.6, 0.4, 3, 0.3, -d2 + 2.4, '#8a6a3a'); break;
+      case 'kilise':   // cami: halılar, mihrap, minber, bağış kutusu
+        for (let i = 0; i < 5; i++) [-1, 1].forEach(sv => k(5.2, 0.04, 1.5, sv * 3.2, 0.02, 4 - i * 2, i % 2 ? '#8a2a2a' : '#a8382e', { carp: false }));   // seccade sıraları
+        k(1.6, 2.6, 0.25, 0, 1.3, -d2 + 0.2, '#3f7a6a', { carp: false }); k(1.1, 2.1, 0.27, 0, 1.15, -d2 + 0.22, '#e8d9a8', { carp: false });   // mihrap
+        k(0.9, 1.6, 2.4, -3.5, 0.8, -d2 + 1.5, ahsap); k(0.95, 0.12, 0.6, -3.5, 2.4, -d2 + 0.7, '#3f7a6a', { carp: false });   // minber
+        k(0.6, 0.6, 0.4, 3, 0.3, -d2 + 2.4, '#8a6a3a'); break;
       case 'istasyon':   // bilet gişesi ve banklar
         k(4, 1.1, 0.7, 6, 0.55, -1.5, ahsap); [-6, -2].forEach(x => k(3, 0.5, 0.6, x, 0.25, 1.5, ahsap)); break;
       case 'samanlik':   // saman balyaları
@@ -289,6 +291,7 @@ const Kasaba = (() => {
     for (let u = -b.g / 2 + 0.3; u <= b.g / 2; u += Math.max(3, b.g / 4)) { if (Math.abs(u) < 1.6) continue;   // kapının önüne direk yok
       const p = dunya(b, u, b.d / 2 + 2.3); engeller.push({ tur: 'gorunmez', x: p.x, z: p.z, r: 0.17 }); }
   });
+  { const b = binaBul('kilise'), p = dunya(b, b.g / 2 + 0.2, b.d / 2 - 1.2); engeller.push({ tur: 'minare', x: p.x, z: p.z, r: 0.95 }); }   // caminin minaresi katı
   { const b = binaBul('banka'); [-2.2, 2.2].forEach(u => { const p = dunya(b, u, b.d / 2 + 0.3); engeller.push({ tur: 'gorunmez', x: p.x, z: p.z, r: 0.33 }); }); }
   // Şerif bekleme odası: oyun başında şerifler burada kilitli bekler, sonra doğudaki kapı açılır
   const serifOdasi = { x: -61, z: -31, g: 10, d: 7, y: 3.2, kapiG: 2.4 };
@@ -342,7 +345,7 @@ const Kasaba = (() => {
     return enFazla;
   }
   // Kurşun/lazer: ağaç, kaktüs, at, fıçı gibi katı süslere çarpar mı? (3B ışın; d birim vektör). İlk çarpma mesafesi
-  const ENGEL_BOY = { agac: 4, kuruAgac: 3.2, kaktus: 2.4, at: 1.9, sandik: 1.5, degirmen: 9, kaya: 0.8, kuyu: 1.3, araba: 2.2, fici: 1.1, ficiYigin: 1.6, saman: 1.4, yalak: 0.8, posta: 1.3, tabut: 0.9 };
+  const ENGEL_BOY = { agac: 4, kuruAgac: 3.2, kaktus: 2.4, at: 1.9, sandik: 1.5, degirmen: 9, kaya: 0.8, kuyu: 1.3, araba: 2.2, fici: 1.1, ficiYigin: 1.6, saman: 1.4, yalak: 0.8, posta: 1.3, tabut: 0.9, minare: 24 };
   function engelIsin(ox, oy, oz, dx, dy, dz, enFazla) {
     let en = enFazla;
     const hl = dx * dx + dz * dz;

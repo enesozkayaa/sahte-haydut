@@ -413,17 +413,11 @@ const Sahne = (() => {
     });
     const so = Kasaba.serifOdasi;
     x.fillStyle = '#6a4a1a'; x.fillRect(P(so.x - so.g / 2), P(so.z - so.d / 2), so.g * S, so.d * S);
-    // Her binanın üstünde simgesi ve adı
-    const ef = Math.round(boyut / 26), af = Math.round(boyut / 40);
-    x.textAlign = 'center'; x.textBaseline = 'middle';
-    const etiket = (emoji, ad, px, pz) => {
-      x.font = `${ef}px sans-serif`; x.fillText(emoji, P(px), P(pz) - af * 0.6);
-      x.font = `900 ${af}px Nunito, sans-serif`; x.lineWidth = Math.max(2, af / 4); x.strokeStyle = '#2a1608'; x.fillStyle = '#fff4dc';
-      x.strokeText(ad, P(px), P(pz) + ef * 0.55); x.fillText(ad, P(px), P(pz) + ef * 0.55);
-    };
-    [...Kasaba.binalar.filter(b => b.tur !== 'ev'), ...Kasaba.alanlar].forEach(b => etiket(b.emoji, b.ad, b.x, b.z));
-    etiket('🚪', 'Şerif odası', so.x, so.z);
-    x.font = `${Math.round(ef * 0.8)}px sans-serif`; x.fillStyle = '#fff'; Kasaba.postaKutulari.forEach(p => x.fillText('📬', P(p.x), P(p.z)));
+    // Yer adları burada çizilmez: oyun.js her karede görev işaretlerine çarpmayacak yere koyar
+    c.yerler = [...Kasaba.binalar.filter(b => b.tur !== 'ev'), ...Kasaba.alanlar].map(b => ({ emoji: b.emoji, ad: b.ad, x: b.x, z: b.z, g: b.g, d: b.d }));
+    c.yerler.push({ emoji: '🚪', ad: 'Şerif odası', x: so.x, z: so.z, g: so.g, d: so.d });
+    const af = Math.round(boyut / 46);
+    x.font = `${Math.round(af * 1.4)}px sans-serif`; x.fillStyle = "#fff"; Kasaba.postaKutulari.forEach(p => x.fillText('📬', P(p.x), P(p.z)));
     return c;
   }
 

@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 42;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 43;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -923,30 +923,65 @@
   const YAKIN = 34;
   // Görev yerleri: kendi işareti + numarası (listedeki numarayla aynı); büyük haritada adı da yazar
   function gorevNumaralari() { return Kasaba.gorevler.filter(g => oyun.aktif.has(g.id)); }
-  function gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk) {
+  function gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk, yazilar, dolu) {
     gorevNumaralari().forEach((g, i) => {
       const yapildi = oyun.gorunen.has(g.id), px = PX(g.x), pz = PZ(g.z);
+      dolu.push({ x0: px - 11 * olcek, x1: px + 14 * olcek, y0: pz - 14 * olcek, y1: pz + 11 * olcek });   // işaretin kendisi
+      x.textAlign = 'center'; x.textBaseline = 'middle';
       if (yapildi) {   // yapılmış görev: yeşil çerçeve, ✓ ve numarası
         nokta(g.x, g.z, 9, '#c8f5c8cc', '#1a9a3a'); x.lineWidth = 2.5 * olcek; x.strokeStyle = '#1aa84a'; x.beginPath(); x.arc(px, pz, 10.5 * olcek, 0, 7); x.stroke();
-        x.font = `900 ${Math.round(12 * olcek)}px Nunito, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#137a30'; x.fillText('✓', px, pz + olcek);
-        const r = 5.5 * olcek, bx = px + 8 * olcek, by = pz - 8 * olcek;
-        x.beginPath(); x.arc(bx, by, r, 0, 7); x.fillStyle = '#1a9a3a'; x.fill(); x.lineWidth = 1.2 * olcek; x.strokeStyle = '#fff'; x.stroke();
-        x.fillStyle = '#fff'; x.font = `900 ${Math.round(7.5 * olcek)}px Nunito, sans-serif`; x.fillText(String(i + 1), bx, by + 0.5 * olcek);
-        if (buyuk) { const yazi = '✓ ' + (g.ad.length > 20 ? g.ad.slice(0, 19) + '…' : g.ad); x.font = `800 ${Math.round(6.5 * olcek)}px Nunito, sans-serif`; x.lineWidth = 3 * olcek; x.strokeStyle = '#000c'; x.fillStyle = '#9af0a8'; x.strokeText(yazi, px, pz + 13 * olcek); x.fillText(yazi, px, pz + 13 * olcek); }
-        return;
+        x.font = `900 ${Math.round(12 * olcek)}px Nunito, sans-serif`; x.fillStyle = '#137a30'; x.fillText('✓', px, pz + olcek);
+      } else {
+        nokta(g.x, g.z, 9, g.agir ? '#ff8a7ae6' : '#ffe9a8e6', g.agir ? '#c01010' : '#3a2a10');
+        x.font = `${Math.round(13 * olcek)}px sans-serif`; x.fillText(g.emoji, px, pz + olcek);
       }
-      nokta(g.x, g.z, 9, g.agir ? '#ff8a7ae6' : '#ffe9a8e6', g.agir ? '#c01010' : '#3a2a10');
-      x.font = `${Math.round(13 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText(g.emoji, px, pz + olcek);
       // numara rozeti
       const r = 5.5 * olcek, bx = px + 8 * olcek, by = pz - 8 * olcek;
-      x.beginPath(); x.arc(bx, by, r, 0, 7); x.fillStyle = g.agir ? '#c01010' : '#2a2a2a'; x.fill(); x.lineWidth = 1.2 * olcek; x.strokeStyle = '#fff'; x.stroke();
+      x.beginPath(); x.arc(bx, by, r, 0, 7); x.fillStyle = yapildi ? '#1a9a3a' : g.agir ? '#c01010' : '#2a2a2a'; x.fill(); x.lineWidth = 1.2 * olcek; x.strokeStyle = '#fff'; x.stroke();
       x.fillStyle = '#fff'; x.font = `900 ${Math.round(7.5 * olcek)}px Nunito, sans-serif`; x.fillText(String(i + 1), bx, by + 0.5 * olcek);
-      if (buyuk) {   // adı (üst kattaysa ⬆)
-        const yazi = (g.kat ? '⬆ ' : '') + (g.ad.length > 22 ? g.ad.slice(0, 21) + '…' : g.ad);
-        x.font = `800 ${Math.round(6.5 * olcek)}px Nunito, sans-serif`; x.lineWidth = 3 * olcek; x.strokeStyle = '#000c'; x.fillStyle = g.agir ? '#ffb0a0' : '#fff3c0';
-        x.strokeText(yazi, px, pz + 13 * olcek); x.fillText(yazi, px, pz + 13 * olcek);
+      if (buyuk) {
+        const ad = g.ad.length > 22 ? g.ad.slice(0, 21) + '…' : g.ad;
+        yazilar.push({ px, pz, yazi: yapildi ? '✓ ' + ad : (g.kat ? '⬆ ' : '') + ad,
+          zemin: yapildi ? '#bff5c8' : g.agir ? '#ffc4b8' : '#fff1b8', kenar: yapildi ? '#1a9a3a' : g.agir ? '#c01010' : '#8a6a20', renk: yapildi ? '#0c4a1c' : g.agir ? '#6a0808' : '#3a2a10' });
       }
+    });
+  }
+  // Kutuyu adaylar arasından boş ilk yere koyar (hiçbiri boş değilse ilk aday)
+  const ustUste = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  function yerBul(adaylar, w, h, N, dolu) {
+    let sec = null, enAz = Infinity;
+    for (const [cx0, cy0] of adaylar) {   // tamamen boş yer yoksa en az çakışanı seç
+      const cx = Math.max(w / 2 + 2, Math.min(N - w / 2 - 2, cx0)), cy = Math.max(h / 2 + 2, Math.min(N - h / 2 - 2, cy0));
+      const k = { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2, cx, cy };
+      let alan = 0; dolu.forEach(d => { if (ustUste(k, d)) alan += (Math.min(k.x1, d.x1) - Math.max(k.x0, d.x0)) * (Math.min(k.y1, d.y1) - Math.max(k.y0, d.y0)); });
+      if (alan < enAz) { enAz = alan; sec = k; } if (!alan) break;
+    }
+    dolu.push(sec); return sec;
+  }
+  const kutu = (x, k, r) => { x.beginPath(); if (x.roundRect) x.roundRect(k.x0, k.y0, k.x1 - k.x0, k.y1 - k.y0, r); else x.rect(k.x0, k.y0, k.x1 - k.x0, k.y1 - k.y0); };
+  // Yer adları: koyu kahve tabela, BÜYÜK HARF; önce binanın üstüne, dolu ise altına / içine / yanına
+  function yerAdlari(x, PX, PZ, olcek, buyuk, dolu) {
+    const N = x.canvas.width, f = (buyuk ? 5.6 : 8) * olcek, h = f * 1.5;
+    x.font = `900 ${Math.round(f)}px Nunito, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    (haritaZemin.yerler || []).forEach(y => {
+      const px = PX(y.x), pz = PZ(y.z); if (px < -60 || px > N + 60 || pz < -60 || pz > N + 60) return;
+      const yazi = y.emoji + ' ' + y.ad.toLocaleUpperCase('tr'), w = x.measureText(yazi).width + f;
+      const ust = PZ(y.z - y.d / 2), alt = PZ(y.z + y.d / 2), sol = PX(y.x - y.g / 2), sag = PX(y.x + y.g / 2);
+      const k = yerBul([[px, ust - h / 2 + 1], [px, alt + h / 2 - 1], [px, ust + h / 2 + 2], [px, pz], [px, alt - h / 2 - 2], [sol - w / 2 + 2, pz], [sag + w / 2 - 2, pz]], w, h, N, dolu);
+      kutu(x, k, h * 0.3); x.fillStyle = '#2a1608e6'; x.fill(); x.lineWidth = Math.max(1, 0.9 * olcek); x.strokeStyle = '#c9a46a'; x.stroke();
+      x.fillStyle = '#f3e2bf'; x.fillText(yazi, k.cx, k.cy + 0.4 * olcek);
+    });
+  }
+  // Görev adları (büyük haritada): sarı / kırmızı / yeşil kutu, işaretin yanında boş yere; uzağa düşerse ince çizgiyle bağlı
+  function gorevYazilari(x, olcek, yazilar, dolu) {
+    const N = x.canvas.width;
+    x.font = `800 ${Math.round(6.5 * olcek)}px Nunito, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    yazilar.forEach(y => {
+      const w = x.measureText(y.yazi).width + 6 * olcek, h = 10 * olcek, o = olcek, yw = w / 2 + 14 * o;
+      const sec = yerBul([[y.px, y.pz + 15 * o], [y.px, y.pz - 17 * o], [y.px + yw, y.pz], [y.px - yw, y.pz], [y.px, y.pz + 26 * o], [y.px, y.pz - 28 * o], [y.px + yw, y.pz + 13 * o], [y.px - yw, y.pz + 13 * o], [y.px + yw, y.pz - 13 * o], [y.px - yw, y.pz - 13 * o], [y.px, y.pz + 37 * o], [y.px, y.pz - 39 * o], [y.px + yw, y.pz + 26 * o], [y.px - yw, y.pz + 26 * o], [y.px + yw, y.pz - 26 * o], [y.px - yw, y.pz - 26 * o], [y.px, y.pz + 48 * o], [y.px, y.pz - 50 * o]], w, h, N, dolu);
+      if (Math.hypot(sec.cx - y.px, sec.cy - y.pz) > 18 * o) { x.beginPath(); x.moveTo(y.px, y.pz); x.lineTo(sec.cx, sec.cy); x.strokeStyle = y.kenar; x.lineWidth = 1.2 * o; x.stroke(); }
+      kutu(x, sec, 3 * o); x.fillStyle = y.zemin; x.fill(); x.lineWidth = 1.2 * o; x.strokeStyle = y.kenar; x.stroke();
+      x.fillStyle = y.renk; x.fillText(y.yazi, sec.cx, sec.cy + 0.5 * o);
     });
   }
   // Listede bir göreve tıklayınca: harita büyür, yeri sarı halkayla yanıp söner
@@ -969,15 +1004,18 @@
     const zs = Z / (SN * 2);
     x.drawImage(haritaZemin, (mx - R + SN) * zs, (mz - R + SN) * zs, R * 2 * zs, R * 2 * zs, 0, 0, N, N);
     const olcek = N / 320;
+    const yazilar = [], dolu = [];
     const nokta = (px, pz, r, renk, kenar = '#0008') => { x.beginPath(); x.arc(PX(px), PZ(pz), r * olcek, 0, 7); x.fillStyle = renk; x.fill(); x.lineWidth = 1.5 * olcek; x.strokeStyle = kenar; x.stroke(); };    if (oyun.rol === 'haydut') {
       x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
-      gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk);
+      gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk, yazilar, dolu);
       if (oyun.kilik > 0) Kasaba.kiliklar.forEach(k => { if (oyun.kilikYerleri.has(k.id)) nokta(k.x, k.z, 4, '#a070ff'); });
       oyun.hedefler.forEach(no => { const v = varliklar.get(no); if (v && v.durum === 0) nokta(v.x, v.z, 4, HEDEF_RENK, '#fff'); });   // bıçaklanacak kişiler
     }
     else if (oyun.rol === 'serif') {   // şerif: kalan görevlerin yerleri (posta kutusundan öğrendiği yapılmışlar silinir)
-      gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk);
+      gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk, yazilar, dolu);
     }
+    yerAdlari(x, PX, PZ, olcek, buyuk, dolu);
+    if (buyuk) gorevYazilari(x, olcek, yazilar, dolu);
     const t = performance.now();
     oyun.darbe = oyun.darbe.filter(d => t - d.bas < (d.sure || 9000));
     oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(PX(d.x), PZ(d.z), (5 + k * 22) * olcek, 0, 7); x.strokeStyle = d.renk ? `rgba(255,220,40,${1 - k})` : `rgba(255,60,40,${1 - k})`; x.lineWidth = 3 * (d.renk ? 1.6 : 1); x.stroke(); if (!d.renk) nokta(d.x, d.z, 4, '#ff3a2a'); });

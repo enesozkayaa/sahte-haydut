@@ -80,7 +80,7 @@
   $('rolHaydutBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'haydut' });
   $('rolSerifBtn').onclick = () => Ag.eveGonder({ tip: 'rolSec', rol: 'serif' });
   Ag.on('katildi', () => ayarYay());
-  const SURUM = 41;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 42;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   { const s = document.getElementById('surumYazi'); if (s) s.textContent = 'Sürüm ' + SURUM; }
   const EKLER = ['kan', 'ceset', 'toz', 'arama', 'durbun', 'kopek', 'tanik', 'posta'];
   const EK_EMOJI = { kan: '🩸', ceset: '🗺️', toz: '💨', arama: '🔎', durbun: '🔭', kopek: '🐕', tanik: '👉', posta: '📬' };
@@ -485,6 +485,21 @@
   function havlamaGoster(m) {
     const d = Math.hypot(m.x - oyun.x, m.z - oyun.z);
     if (m.buldu) { Ses.havla(Math.max(0, 1 - d / 40)); if (d < 20 && m.no !== oyun.benimNo && oyun.rol === 'haydut') toast('🐕 Yakında bir köpek havlıyor!', 1800); }
+    // Taranan bölge: yerde köpeğin menzili kadar çember (dalga gibi genişler, sonra söner) ve haritada aynı çember
+    const r = m.menzil || 10, renk = m.buldu ? '#ff3a2a' : '#5ab0ff';
+    oyun.kopekHalka = { x: m.x, z: m.z, r, bas: performance.now(), renk };
+    const halka = new THREE.Mesh(new THREE.RingGeometry(r - 0.18, r, 72), new THREE.MeshBasicMaterial({ color: renk, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }));
+    const disk = new THREE.Mesh(new THREE.CircleGeometry(r, 72), new THREE.MeshBasicMaterial({ color: renk, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }));
+    const dalga = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 72), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }));
+    [halka, disk, dalga].forEach(o => { o.rotation.x = -Math.PI / 2; o.position.set(m.x, (m.y || 0) + 0.12, m.z); o.renderOrder = 5; Sahne.scene.add(o); });
+    const hBas = performance.now(), hAnim = () => {
+      const g = (performance.now() - hBas) / 1000;
+      dalga.scale.setScalar(Math.max(0.01, Math.min(1, g / 0.8)) * r); dalga.material.opacity = Math.max(0, 0.8 - g);
+      const sonme = Math.max(0, 1 - Math.max(0, g - 2.5) / 1);
+      halka.material.opacity = 0.9 * sonme; disk.material.opacity = 0.12 * sonme;
+      if (g < 3.5 && oyun) requestAnimationFrame(hAnim); else [halka, disk, dalga].forEach(o => { Sahne.scene?.remove(o); o.geometry.dispose(); o.material.dispose(); });
+    };
+    hAnim();
     const v = varliklar.get(m.no); if (!v) return;
     const s = emojiSprite('🐕', m.buldu ? '#c0302acc' : '#6a7a8acc'); s.scale.set(1.1, 1.1, 1);
     s.position.set(v.x, v.y + 2.7, v.z); Sahne.scene.add(s);
@@ -910,8 +925,16 @@
   function gorevNumaralari() { return Kasaba.gorevler.filter(g => oyun.aktif.has(g.id)); }
   function gorevIsaretleri(x, nokta, PX, PZ, olcek, buyuk) {
     gorevNumaralari().forEach((g, i) => {
-      if (oyun.gorunen.has(g.id)) return;
-      const px = PX(g.x), pz = PZ(g.z);
+      const yapildi = oyun.gorunen.has(g.id), px = PX(g.x), pz = PZ(g.z);
+      if (yapildi) {   // yapılmış görev: yeşil çerçeve, ✓ ve numarası
+        nokta(g.x, g.z, 9, '#c8f5c8cc', '#1a9a3a'); x.lineWidth = 2.5 * olcek; x.strokeStyle = '#1aa84a'; x.beginPath(); x.arc(px, pz, 10.5 * olcek, 0, 7); x.stroke();
+        x.font = `900 ${Math.round(12 * olcek)}px Nunito, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#137a30'; x.fillText('✓', px, pz + olcek);
+        const r = 5.5 * olcek, bx = px + 8 * olcek, by = pz - 8 * olcek;
+        x.beginPath(); x.arc(bx, by, r, 0, 7); x.fillStyle = '#1a9a3a'; x.fill(); x.lineWidth = 1.2 * olcek; x.strokeStyle = '#fff'; x.stroke();
+        x.fillStyle = '#fff'; x.font = `900 ${Math.round(7.5 * olcek)}px Nunito, sans-serif`; x.fillText(String(i + 1), bx, by + 0.5 * olcek);
+        if (buyuk) { const yazi = '✓ ' + (g.ad.length > 20 ? g.ad.slice(0, 19) + '…' : g.ad); x.font = `800 ${Math.round(6.5 * olcek)}px Nunito, sans-serif`; x.lineWidth = 3 * olcek; x.strokeStyle = '#000c'; x.fillStyle = '#9af0a8'; x.strokeText(yazi, px, pz + 13 * olcek); x.fillText(yazi, px, pz + 13 * olcek); }
+        return;
+      }
       nokta(g.x, g.z, 9, g.agir ? '#ff8a7ae6' : '#ffe9a8e6', g.agir ? '#c01010' : '#3a2a10');
       x.font = `${Math.round(13 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillText(g.emoji, px, pz + olcek);
@@ -958,6 +981,10 @@
     const t = performance.now();
     oyun.darbe = oyun.darbe.filter(d => t - d.bas < (d.sure || 9000));
     oyun.darbe.forEach(d => { const k = ((t - d.bas) % 1500) / 1500; x.beginPath(); x.arc(PX(d.x), PZ(d.z), (5 + k * 22) * olcek, 0, 7); x.strokeStyle = d.renk ? `rgba(255,220,40,${1 - k})` : `rgba(255,60,40,${1 - k})`; x.lineWidth = 3 * (d.renk ? 1.6 : 1); x.stroke(); if (!d.renk) nokta(d.x, d.z, 4, '#ff3a2a'); });
+    if (oyun.kopekHalka && t - oyun.kopekHalka.bas < 3500) {   // köpeğin taradığı alan
+      const h = oyun.kopekHalka, sn = Math.max(0, 1 - Math.max(0, (t - h.bas) / 1000 - 2.5));
+      x.beginPath(); x.arc(PX(h.x), PZ(h.z), h.r * S, 0, 7); x.globalAlpha = 0.18 * sn; x.fillStyle = h.renk; x.fill(); x.globalAlpha = sn; x.lineWidth = 2.5 * olcek; x.strokeStyle = h.renk; x.stroke(); x.globalAlpha = 1;
+    }
     // Cesetler (şerif): oyun boyunca 💀; görünen alanın dışındaysa kenarda yönünü gösteren kırmızı ok
     x.font = `${Math.round(15 * olcek)}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
     oyun.cesetler.forEach(c => x.fillText('💀', PX(c.x), PZ(c.z)));

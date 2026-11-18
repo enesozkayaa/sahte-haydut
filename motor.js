@@ -170,7 +170,7 @@ const Motor = (() => {
         p.kopek--;
         const buldu = o.oyuncular.some(q => { if (q.rol !== 'haydut' || q.durum !== 0) return false; const w = o.varliklar.get(q.no); return w && Math.hypot(w.x - v.x, w.z - v.z) < o.ed.kopekMenzil && Math.abs((w.y || 0) - (v.y || 0)) < 2; });
         cb.kisiye(id, { tip: 'kopek', buldu, kalan: p.kopek });
-        cb.herkese({ tip: 'havla', no: p.no, x: v.x, z: v.z, buldu });
+        cb.herkese({ tip: 'havla', no: p.no, x: v.x, z: v.z, y: v.y || 0, buldu, menzil: o.ed.kopekMenzil });
         break;
       }
       case 'posta': {   // şerif posta kutusuna baktı: en az 10 sn önce yapılmış görevleri öğrenir
